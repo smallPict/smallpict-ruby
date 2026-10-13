@@ -19,8 +19,13 @@ jobs:
       - name: Sync version dynamically from git tag
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$GITHUB_REF_NAME' is not a release tag (expected vX.Y.Z). Run this workflow from a tag."
+            exit 1
+          fi
           echo "Setting dynamic release version to: $VERSION"
           sed -i "s/VERSION = \".*\"/VERSION = \"$VERSION\"/" lib/smallpict/version.rb
+          grep -q "VERSION = \"$VERSION\"" lib/smallpict/version.rb
       - name: Build & Push Gem
         env:
           RUBYGEMS_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}

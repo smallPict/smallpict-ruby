@@ -4,9 +4,10 @@ module SmallPict
   module Models
     class OptimizeOptions
       attr_reader :format, :quality, :max_width, :max_height, :max_dimension, :fit,
-                  :mode, :lossless, :strip_metadata, :filename, :mime_type, :content_type, :idempotency_key
+                  :mode, :lossless, :folder, :strip_metadata, :filename, :mime_type, :content_type, :idempotency_key
 
       # mode:     SmallPict::Mode::LOSSY (server default when omitted), EXTREME or LOSSLESS.
+      # folder:   optional upload folder, e.g. "products/shoes"; the server lower-cases it.
       # lossless: deprecated, use `mode: SmallPict::Mode::LOSSLESS`; removal not before the next major.
       def initialize(
         format: "auto",
@@ -17,6 +18,7 @@ module SmallPict
         fit: "cover",
         mode: nil,
         lossless: nil,
+        folder: nil,
         strip_metadata: true,
         filename: nil,
         mime_type: nil,
@@ -31,6 +33,7 @@ module SmallPict
         @fit             = fit.to_s
         @lossless        = lossless
         @mode            = resolve_mode(mode, lossless)
+        @folder          = folder.nil? ? nil : Folder.validate!(folder)
         @strip_metadata  = strip_metadata
         @filename        = filename
         @mime_type       = mime_type || content_type
@@ -47,6 +50,7 @@ module SmallPict
           max_dimension: @max_dimension,
           fit: @fit,
           mode: @mode,
+          folder: @folder,
           strip_metadata: @strip_metadata
         }.compact
       end

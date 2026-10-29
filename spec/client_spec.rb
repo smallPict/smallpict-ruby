@@ -142,9 +142,60 @@ RSpec.describe SmallPict::Client do
         expect(e.details["allowed_modes"]).to eq(%w[lossy extreme])
       }
     end
+
+    context "folder" do
+      before do
+        stub_request(:post, "#{base_url}/v1/optimize")
+          .to_return(status: 202, headers: { "Content-Type" => "application/json" },
+                     body: JSON.generate({ job_id: "job_f", status: "processing", folder: "products/shoes" }))
+      end
+
+      def sent_options
+        options = nil
+        expect(WebMock).to(have_requested(:post, "#{base_url}/v1/optimize").with do |req|
+          options = JSON.parse(req.body)["options"]
+        end)
+        options
+      end
+
+      it "sends folder as options.folder and surfaces it from the response" do
+        result = client.optimize("img", folder: "Products/Shoes")
+        expect(sent_options["folder"]).to eq("Products/Shoes")
+        expect(result.folder).to eq("products/shoes")
+      end
+
+      it "omits folder when unset" do
+        client.optimize("img")
+        expect(sent_options).not_to have_key("folder")
+      end
+
+      %w[a//b /a a/ ../x a/../b a/b/c/d].each do |bad|
+        it "rejects #{bad.inspect} without an HTTP call" do
+          expect { client.optimize("img", folder: bad) }.to raise_error(SmallPict::ValidationError)
+          expect(WebMock).not_to have_requested(:post, "#{base_url}/v1/optimize")
+        end
+      end
+    end
+
+    it "raises ValidationError with the server message on 400 invalid_folder" do
+      stub_request(:post, "#{base_url}/v1/optimize")
+        .to_return(status: 400, headers: { "Content-Type" => "application/json" },
+                   body: JSON.generate({ error: { code: "invalid_folder", message: "folder has an invalid character" } }))
+
+      expect { client.optimize("img", folder: "bad.name") }.to raise_error(SmallPict::ValidationError) { |e|
+        expect(e.message).to include("folder has an invalid character")
+      }
+    end
   end
 
   describe "#get_job_status" do
+    it "exposes folder as returned" do
+      stub_request(:get, "#{base_url}/v1/optimize/status?job_id=job_f")
+        .to_return(status: 200, body: JSON.generate({ job_id: "job_f", status: "completed", folder: "blog/2026" }))
+
+      expect(client.get_job_status("job_f").folder).to eq("blog/2026")
+    end
+
     it "exposes mode_applied and quality_applied" do
       stub_request(:get, "#{base_url}/v1/optimize/status?job_id=job_1")
         .to_return(status: 200, headers: { "Content-Type" => "application/json" },
@@ -198,6 +249,53 @@ RSpec.describe SmallPict::Client do
 
       res = client.purge_cdn(["https://cdn.smallpict.app/opt/photo.avif"])
       expect(res.message).to eq("Purge accepted")
+    end
+
+    def sent_purge_body
+      body = nil
+      expect(WebMock).to(have_requested(:post, "#{base_url}/v1/purge").with { |req| body = JSON.parse(req.body) })
+      body
+    end
+
+    it "keeps the url purge body unchanged, without folder" do
+      stub_request(:post, "#{base_url}/v1/purge").to_return(status: 202, body: "{}")
+      client.purge_cdn(["https://cdn.smallpict.app/a.avif"], folder: "ignored")
+      expect(sent_purge_body).to eq("purge_type" => "url", "urls" => ["https://cdn.smallpict.app/a.avif"])
+    end
+
+    it "sends folder with purge_type folder" do
+      stub_request(:post, "#{base_url}/v1/purge").to_return(status: 202, body: "{}")
+      client.purge_cdn(purge_type: "folder", folder: "products/shoes")
+      expect(sent_purge_body).to eq("purge_type" => "folder", "urls" => [], "folder" => "products/shoes")
+    end
+
+    it "requires folder for purge_type folder, without an HTTP call" do
+      expect { client.purge_cdn(purge_type: "folder") }.to raise_error(SmallPict::ValidationError)
+      expect { client.purge_cdn(purge_type: "folder", folder: "a/../b") }.to raise_error(SmallPict::ValidationError)
+      expect(WebMock).not_to have_requested(:post, "#{base_url}/v1/purge")
+    end
+
+    it "raises RateLimitError on 429 purge_rate_limited and does not retry" do
+      stub_request(:post, "#{base_url}/v1/purge")
+        .to_return(status: 429, headers: { "Retry-After" => "1800" },
+                   body: JSON.generate({ error: { code: "purge_rate_limited", message: "Too many folder purges" } }))
+      allow(client).to receive(:sleep)
+
+      expect { client.purge_cdn(purge_type: "folder", folder: "blog") }.to raise_error(SmallPict::RateLimitError) { |e|
+        expect(e.message).to include("Too many folder purges")
+      }
+      expect(WebMock).to have_requested(:post, "#{base_url}/v1/purge").once
+      expect(client).not_to have_received(:sleep)
+    end
+
+    it "still retries other 429s" do
+      stub_request(:post, "#{base_url}/v1/purge")
+        .to_return({ status: 429, body: JSON.generate({ error: { code: "RATE_LIMIT_EXCEEDED", message: "slow down" } }) },
+                   { status: 202, body: "{}" })
+      allow(client).to receive(:sleep)
+
+      client.purge_cdn(purge_type: "all")
+      expect(WebMock).to have_requested(:post, "#{base_url}/v1/purge").twice
     end
   end
 

@@ -5,7 +5,7 @@ module SmallPict
     class OptimizeResult
       attr_reader :job_id, :status, :url, :format, :original_size,
                   :compressed_size, :bytes_saved, :savings_percentage,
-                  :upload_url, :data
+                  :upload_url, :data, :folder
 
       def initialize(attributes = {})
         @job_id             = attributes[:job_id] || attributes["job_id"] || "sync"
@@ -18,6 +18,8 @@ module SmallPict
         @savings_percentage = (attributes[:savings_percentage] || attributes["savings_percentage"] || calculate_savings_percentage).to_f.round(2)
         @upload_url         = attributes[:upload_url] || attributes["upload_url"]
         @data               = attributes[:data]
+        # Normalized (lower case) by the server; nil without a folder.
+        @folder             = attributes[:folder] || attributes["folder"]
       end
 
       private

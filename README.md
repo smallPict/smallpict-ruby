@@ -56,7 +56,8 @@ result = SmallPict.optimize(
   format: "avif",
   quality: 80,
   max_width: 1920,
-  mode: SmallPict::Mode::LOSSY # LOSSY (default) | EXTREME | LOSSLESS; replaces the deprecated `lossless:`
+  mode: SmallPict::Mode::LOSSY, # LOSSY (default) | EXTREME | LOSSLESS; replaces the deprecated `lossless:`
+  folder: "products/shoes"      # optional, 1-3 segments; stored lower case, returned as result.folder
 )
 
 puts "Optimized CDN URL: #{result.url}"
@@ -107,6 +108,12 @@ puts "Plan: #{quota.plan}, Quota Used: #{quota.quota_percentage}%"
 # 2. Invalidate CDN cache for updated images
 purge = SmallPict.purge_cdn(["https://cdn.smallpict.app/opt/hero-banner.avif"])
 puts purge.message
+
+# 3. Purge one upload folder, or all of your files
+SmallPict.purge_cdn(purge_type: "folder", folder: "products/shoes")
+SmallPict.purge_cdn(purge_type: "all")
+# Folder purges are limited to 10 per hour and "all" to 2 per hour: one more raises
+# SmallPict::RateLimitError (429 purge_rate_limited), which the client does not retry.
 ```
 
 ---

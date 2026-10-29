@@ -68,12 +68,18 @@ module SmallPict
       Models::QuotaResponse.new(res)
     end
 
-    def purge_cdn(urls = [], purge_type: "url")
+    # purge_type: "url" (default), "folder" (with `folder:`) or "all".
+    def purge_cdn(urls = [], purge_type: "url", folder: nil)
       url_list = urls.is_a?(Array) ? urls : [urls]
       payload = {
         purge_type: purge_type.to_s,
         urls:       url_list
       }
+      if payload[:purge_type] == "folder"
+        raise ValidationError, "folder is required for purge_type \"folder\"" if folder.nil? || folder.to_s.empty?
+
+        payload[:folder] = Folder.validate!(folder)
+      end
 
       res = request(:post, "/v1/purge", payload)
       Models::PurgeResponse.new(res)
@@ -145,7 +151,7 @@ module SmallPict
           request_id = response.headers["x-request-id"]
           retry_after = response.headers["retry-after"]&.to_i
 
-          if status == 429 || (status >= 500 && status <= 504)
+          if (status == 429 && !hourly_purge_limit?(response.body)) || (status >= 500 && status <= 504)
             if attempt <= @max_retries
               delay = base_delay * (2**(attempt - 1))
               delay = retry_after if retry_after && retry_after.positive?
@@ -182,6 +188,12 @@ module SmallPict
         f.options.open_timeout = @timeout
         f.adapter Faraday.default_adapter
       end
+    end
+
+    # 429 purge_rate_limited is an hourly limit: retrying within seconds cannot succeed.
+    def hourly_purge_limit?(body_str)
+      body = parse_body(body_str)
+      body.is_a?(Hash) && body["error"].is_a?(Hash) && body["error"]["code"] == "purge_rate_limited"
     end
 
     def parse_body(body_str)

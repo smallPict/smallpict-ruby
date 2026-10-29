@@ -5,6 +5,7 @@ require_relative "smallpict/configuration"
 require_relative "smallpict/crypto"
 require_relative "smallpict/errors"
 require_relative "smallpict/mode"
+require_relative "smallpict/folder"
 require_relative "smallpict/models/optimize_options"
 require_relative "smallpict/models/optimize_result"
 require_relative "smallpict/models/quota_response"
@@ -40,8 +41,8 @@ module SmallPict
       client.get_quota
     end
 
-    def purge_cdn(urls = [], purge_type: "url")
-      client.purge_cdn(urls, purge_type: purge_type)
+    def purge_cdn(urls = [], purge_type: "url", folder: nil)
+      client.purge_cdn(urls, purge_type: purge_type, folder: folder)
     end
 
     def validate_key

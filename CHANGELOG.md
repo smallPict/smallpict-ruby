@@ -14,12 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `purge_cdn(purge_type: "folder", folder: "...")` purges one upload folder. `folder:` is required for that type (`ValidationError` before any request when missing or malformed) and is sent only with it; `url` and `all` purges are unchanged.
 
 ### Changed
+- README: example of `mode: SmallPict::Mode::EXTREME` without `quality:`.
 - `429 purge_rate_limited` (hourly limit: 10 `folder` and 2 `all` purges per hour) raises `RateLimitError` without automatic retries, since the limit does not reset within seconds. Other 429 responses are still retried as before.
 
 ### Deprecated
 - `lossless:` option on `optimize`. Use `mode: SmallPict::Mode::LOSSLESS` instead. `lossless: true` without `mode:` is sent as `mode: "lossless"`; `lossless: true` with a different `mode:` raises `ValidationError` before any request. Using it emits a `:deprecated` category warning (shown when `Warning[:deprecated]` is enabled). It will not be removed before the next major version.
 
 ### Fixed
+- `quality:` is no longer sent when unset (its default is now `nil` instead of `80`), so the server picks the default per mode: lossy stays at 80, and `extreme` now gets its per-codec default instead of a lossy-sized Q80 result. A quality you set is still sent. `OptimizeOptions#quality` returns `nil` when unset.
 - `lossless: true` used to be ignored by the server; it is now honoured (sent as `mode: "lossless"`). The SDK no longer sends `lossless` on the wire.
 
 ## [0.0.2] - 2026-08-22

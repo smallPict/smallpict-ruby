@@ -7,11 +7,12 @@ module SmallPict
                   :mode, :lossless, :folder, :strip_metadata, :filename, :mime_type, :content_type, :idempotency_key
 
       # mode:     SmallPict::Mode::LOSSY (server default when omitted), EXTREME or LOSSLESS.
+      # quality:  optional 1-100; omitted when nil so the server picks the default per mode.
       # folder:   optional upload folder, e.g. "products/shoes"; the server lower-cases it.
       # lossless: deprecated, use `mode: SmallPict::Mode::LOSSLESS`; removal not before the next major.
       def initialize(
         format: "auto",
-        quality: 80,
+        quality: nil,
         max_width: nil,
         max_height: nil,
         max_dimension: nil,

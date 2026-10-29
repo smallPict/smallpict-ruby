@@ -64,6 +64,16 @@ puts "Optimized CDN URL: #{result.url}"
 puts "Saved: #{result.savings_percentage}% (#{result.bytes_saved} bytes)"
 ```
 
+`EXTREME` gives the smallest files on every plan. Leave `quality` out so the server uses its default for the output format; a quality you set is kept or raised to the format floor. Mode comparison: https://smallpict.app/en/docs/image-settings
+
+```ruby
+result = SmallPict.optimize(
+  File.binread("hero-banner.png"),
+  format: "webp",
+  mode: SmallPict::Mode::EXTREME # no quality: the server picks it per format
+)
+```
+
 ### 2. Rails Initializer (`config/initializers/smallpict.rb`)
 
 ```ruby

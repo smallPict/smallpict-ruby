@@ -177,6 +177,32 @@ RSpec.describe SmallPict::Client do
       end
     end
 
+    context "quality" do
+      before do
+        stub_request(:post, "#{base_url}/v1/optimize")
+          .to_return(status: 202, headers: { "Content-Type" => "application/json" },
+                     body: JSON.generate({ job_id: "job_q", status: "processing" }))
+      end
+
+      def sent_options
+        options = nil
+        expect(WebMock).to(have_requested(:post, "#{base_url}/v1/optimize").with do |req|
+          options = JSON.parse(req.body)["options"]
+        end)
+        options
+      end
+
+      it "omits quality when unset so the server picks the default per mode" do
+        client.optimize("img", mode: SmallPict::Mode::EXTREME)
+        expect(sent_options).not_to have_key("quality")
+      end
+
+      it "sends quality when set" do
+        client.optimize("img", mode: SmallPict::Mode::EXTREME, quality: 70)
+        expect(sent_options["quality"]).to eq(70)
+      end
+    end
+
     it "raises ValidationError with the server message on 400 invalid_folder" do
       stub_request(:post, "#{base_url}/v1/optimize")
         .to_return(status: 400, headers: { "Content-Type" => "application/json" },

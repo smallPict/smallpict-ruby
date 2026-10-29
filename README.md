@@ -55,7 +55,8 @@ result = SmallPict.optimize(
   image_data,
   format: "avif",
   quality: 80,
-  max_width: 1920
+  max_width: 1920,
+  mode: SmallPict::Mode::LOSSY # LOSSY (default) | EXTREME | LOSSLESS; replaces the deprecated `lossless:`
 )
 
 puts "Optimized CDN URL: #{result.url}"

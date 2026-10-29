@@ -4,7 +4,7 @@ module SmallPict
   module Models
     class JobStatusResult
       attr_reader :job_id, :status, :url, :format, :bytes_saved,
-                  :error, :created_at, :updated_at
+                  :error, :created_at, :updated_at, :mode_applied, :quality_applied
 
       def initialize(attributes = {})
         @job_id      = attributes[:job_id] || attributes["job_id"]
@@ -15,6 +15,9 @@ module SmallPict
         @error       = attributes[:error] || attributes["error"]
         @created_at  = attributes[:created_at] || attributes["created_at"]
         @updated_at  = attributes[:updated_at] || attributes["updated_at"]
+        # Reported by the server; nil for jobs created before modes existed.
+        @mode_applied    = attributes[:mode_applied] || attributes["mode_applied"]
+        @quality_applied = attributes[:quality_applied] || attributes["quality_applied"]
       end
     end
   end

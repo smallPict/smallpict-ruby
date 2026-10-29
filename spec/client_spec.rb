@@ -69,6 +69,101 @@ RSpec.describe SmallPict::Client do
       expect(res.status).to eq("completed")
       expect(res.savings_percentage).to eq(0.0)
     end
+
+    # Cases from smallpict-sdk-shared/compression-modes.json (mapping_cases).
+    context "compression mode mapping" do
+      let(:ok_body) { JSON.generate({ job_id: "job_mode", status: "processing" }) }
+
+      before do
+        stub_request(:post, "#{base_url}/v1/optimize")
+          .to_return(status: 202, headers: { "Content-Type" => "application/json" }, body: ok_body)
+      end
+
+      def sent_options
+        options = nil
+        expect(WebMock).to(have_requested(:post, "#{base_url}/v1/optimize").with do |req|
+          options = JSON.parse(req.body)["options"]
+        end)
+        options
+      end
+
+      [
+        ["no mode, no flag",       {},                                  nil],
+        ["mode only",              { mode: "extreme" },                 "extreme"],
+        ["deprecated flag only",   { lossless: true },                  "lossless"],
+        ["flag false is ignored",  { lossless: false },                 nil],
+        ["flag agrees with mode",  { mode: "lossless", lossless: true }, "lossless"]
+      ].each do |name, input, wire_mode|
+        it "#{name}: sends mode #{wire_mode.inspect} and never lossless" do
+          client.optimize("img", **input)
+          options = sent_options
+          expect(options["mode"]).to eq(wire_mode)
+          expect(options).not_to have_key("lossless")
+          expect(options.key?("mode")).to eq(!wire_mode.nil?)
+        end
+      end
+
+      it "flag contradicts mode: raises ValidationError without an HTTP call" do
+        expect { client.optimize("img", mode: "lossy", lossless: true) }
+          .to raise_error(SmallPict::ValidationError)
+        expect(WebMock).not_to have_requested(:post, "#{base_url}/v1/optimize")
+      end
+
+      it "accepts the Mode constants" do
+        expect(SmallPict::Mode::ALL).to eq(%w[lossy extreme lossless])
+        expect(SmallPict::Mode::ALL).to be_frozen
+        client.optimize("img", mode: SmallPict::Mode::LOSSLESS)
+        expect(sent_options["mode"]).to eq("lossless")
+      end
+
+      it "warns that lossless is deprecated" do
+        expect(Kernel).to receive(:warn).with(/deprecated/, category: :deprecated)
+        client.optimize("img", lossless: true)
+      end
+    end
+
+    it "raises PermissionDeniedError with details on 403 mode_not_in_plan" do
+      stub_request(:post, "#{base_url}/v1/optimize")
+        .to_return(
+          status: 403,
+          headers: { "Content-Type" => "application/json" },
+          body: JSON.generate({
+            error: {
+              code: "mode_not_in_plan",
+              message: "Mode lossless is not included in your plan",
+              details: { mode: "lossless", allowed_modes: %w[lossy extreme] }
+            }
+          })
+        )
+
+      expect { client.optimize("img", mode: "lossless") }.to raise_error(SmallPict::PermissionDeniedError) { |e|
+        expect(e.message).to include("Mode lossless is not included in your plan")
+        expect(e.details["mode"]).to eq("lossless")
+        expect(e.details["allowed_modes"]).to eq(%w[lossy extreme])
+      }
+    end
+  end
+
+  describe "#get_job_status" do
+    it "exposes mode_applied and quality_applied" do
+      stub_request(:get, "#{base_url}/v1/optimize/status?job_id=job_1")
+        .to_return(status: 200, headers: { "Content-Type" => "application/json" },
+                   body: JSON.generate({ job_id: "job_1", status: "completed", mode_applied: "lossy", quality_applied: 68 }))
+
+      res = client.get_job_status("job_1")
+      expect(res.mode_applied).to eq("lossy")
+      expect(res.quality_applied).to eq(68)
+    end
+
+    it "leaves mode_applied and quality_applied nil for old jobs" do
+      stub_request(:get, "#{base_url}/v1/optimize/status?job_id=job_old")
+        .to_return(status: 200, headers: { "Content-Type" => "application/json" },
+                   body: JSON.generate({ job_id: "job_old", status: "completed" }))
+
+      res = client.get_job_status("job_old")
+      expect(res.mode_applied).to be_nil
+      expect(res.quality_applied).to be_nil
+    end
   end
 
   describe "#get_quota" do

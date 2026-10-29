@@ -12,7 +12,7 @@ RSpec.describe "SmallPict Models" do
         max_height: 1080,
         max_dimension: 1600,
         fit: "contain",
-        lossless: false,
+        mode: SmallPict::Mode::EXTREME,
         strip_metadata: true,
         filename: "hero.png",
         idempotency_key: "idemp_123"
@@ -25,6 +25,8 @@ RSpec.describe "SmallPict Models" do
       expect(hash[:max_height]).to eq(1080)
       expect(hash[:max_dimension]).to eq(1600)
       expect(hash[:fit]).to eq("contain")
+      expect(hash[:mode]).to eq("extreme")
+      expect(hash).not_to have_key(:lossless)
       expect(opts.idempotency_key).to eq("idemp_123")
     end
   end

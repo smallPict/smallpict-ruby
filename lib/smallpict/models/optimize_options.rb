@@ -4,8 +4,10 @@ module SmallPict
   module Models
     class OptimizeOptions
       attr_reader :format, :quality, :max_width, :max_height, :max_dimension, :fit,
-                  :lossless, :strip_metadata, :filename, :mime_type, :content_type, :idempotency_key
+                  :mode, :lossless, :strip_metadata, :filename, :mime_type, :content_type, :idempotency_key
 
+      # mode:     SmallPict::Mode::LOSSY (server default when omitted), EXTREME or LOSSLESS.
+      # lossless: deprecated, use `mode: SmallPict::Mode::LOSSLESS`; removal not before the next major.
       def initialize(
         format: "auto",
         quality: 80,
@@ -13,7 +15,8 @@ module SmallPict
         max_height: nil,
         max_dimension: nil,
         fit: "cover",
-        lossless: false,
+        mode: nil,
+        lossless: nil,
         strip_metadata: true,
         filename: nil,
         mime_type: nil,
@@ -27,6 +30,7 @@ module SmallPict
         @max_dimension   = max_dimension
         @fit             = fit.to_s
         @lossless        = lossless
+        @mode            = resolve_mode(mode, lossless)
         @strip_metadata  = strip_metadata
         @filename        = filename
         @mime_type       = mime_type || content_type
@@ -42,9 +46,24 @@ module SmallPict
           max_height: @max_height,
           max_dimension: @max_dimension,
           fit: @fit,
-          lossless: @lossless,
+          mode: @mode,
           strip_metadata: @strip_metadata
         }.compact
+      end
+
+      private
+
+      # `lossless:` is deprecated: map it to `mode:` and never send it on the wire.
+      def resolve_mode(mode, lossless)
+        mode = mode&.to_s
+        unless lossless.nil?
+          Kernel.warn("SmallPict: `lossless:` is deprecated, use `mode: SmallPict::Mode::LOSSLESS`.",
+                      category: :deprecated)
+        end
+        return mode unless lossless == true
+        return Mode::LOSSLESS if mode.nil? || mode == Mode::LOSSLESS
+
+        raise ValidationError, "`lossless: true` contradicts `mode: #{mode.inspect}`; set only `mode:`."
       end
     end
   end

@@ -2,7 +2,9 @@
 
 module SmallPict
   class Error < StandardError
-    attr_reader :code, :status_code, :request_id, :details
+    # upgrade_url: dashboard page where the missing capacity is added
+    # (details.upgrade_url), or nil. The SDK never opens or fetches it.
+    attr_reader :code, :status_code, :request_id, :details, :upgrade_url
 
     def initialize(message = "", code: "INTERNAL_ERROR", status_code: nil, request_id: nil, details: nil)
       @raw_message = self.class.sanitize(message)
@@ -10,6 +12,8 @@ module SmallPict
       @status_code = status_code
       @request_id  = request_id
       @details     = details
+      url          = details.is_a?(Hash) ? (details["upgrade_url"] || details[:upgrade_url]) : nil
+      @upgrade_url = url.is_a?(String) ? url : nil
       super(@raw_message)
     end
 
@@ -58,8 +62,13 @@ module SmallPict
   end
 
   class PermissionDeniedError < Error
+    # Modes the plan allows, from details.allowed_modes of 403 mode_not_in_plan; otherwise nil.
+    attr_reader :allowed_modes
+
     def initialize(message = "Permission denied for this resource", request_id: nil, details: nil)
       super(message, code: "FORBIDDEN", status_code: 403, request_id: request_id, details: details)
+      modes = details.is_a?(Hash) ? (details["allowed_modes"] || details[:allowed_modes]) : nil
+      @allowed_modes = modes.is_a?(Array) ? modes.grep(String) : nil
     end
   end
 

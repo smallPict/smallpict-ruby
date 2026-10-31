@@ -207,11 +207,13 @@ module SmallPict
     def handle_error_response(status, body, request_id, retry_after)
       message = "API request failed with HTTP #{status}"
       details = nil
+      code = "INTERNAL_ERROR"
 
       if body.is_a?(Hash)
         if body["error"].is_a?(Hash)
           message = body["error"]["message"] || message
           details = body["error"]["details"]
+          code = body["error"]["code"] if body["error"]["code"].is_a?(String)
         elsif body["error"].is_a?(String)
           message = body["error"]
         elsif body["message"].is_a?(String)
@@ -231,7 +233,7 @@ module SmallPict
           raise ServerError.new(message, status_code: status, request_id: request_id, details: details)
         end
 
-        raise Error.new(message, status_code: status, request_id: request_id, details: details)
+        raise Error.new(message, code: code, status_code: status, request_id: request_id, details: details)
       end
     end
 

@@ -5,7 +5,7 @@ module SmallPict
     class QuotaResponse
       attr_reader :plan, :bytes_used, :quota_limit, :quota_percentage,
                   :cdn_egress_used_bytes, :cdn_egress_quota_bytes,
-                  :active_keys_count, :active_sites_count
+                  :active_keys_count, :active_sites_count, :capacity
 
       def initialize(attributes = {})
         @plan                   = attributes[:plan] || attributes["plan"] || "free"
@@ -16,6 +16,8 @@ module SmallPict
         @cdn_egress_quota_bytes = attributes[:cdn_egress_quota_bytes] || attributes["cdn_egress_quota_bytes"]
         @active_keys_count      = attributes[:active_keys_count] || attributes["active_keys_count"]
         @active_sites_count     = attributes[:active_sites_count] || attributes["active_sites_count"]
+        # nil when the server could not read capacity, and from older servers that omit it.
+        @capacity               = Capacity.from_hash(attributes[:capacity] || attributes["capacity"])
       end
 
       private

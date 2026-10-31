@@ -126,6 +126,29 @@ SmallPict.purge_cdn(purge_type: "all")
 # SmallPict::RateLimitError (429 purge_rate_limited), which the client does not retry.
 ```
 
+### Capacity and upgrade links
+
+`get_quota` also returns the read-only `capacity` of the key's product. Members that do not apply to your plan are `nil`, and `capacity` itself is `nil` when the server could not read it or does not send it.
+
+```ruby
+cap = SmallPict.get_quota.capacity
+if cap
+  puts "Storage: #{cap.storage.used_bytes}/#{cap.storage.limit_bytes}" if cap.storage
+  puts "CDN status: #{cap.cdn.status}" if cap.cdn
+  puts "Account lapsed (#{cap.lapse.stage}), manage it at #{cap.manage_url}" if cap.lapse
+end
+
+begin
+  SmallPict.optimize("photo.jpg")
+rescue SmallPict::QuotaExceededError => e
+  puts "Add capacity at #{e.upgrade_url}" if e.upgrade_url
+rescue SmallPict::PermissionDeniedError => e
+  puts "Allowed modes: #{e.allowed_modes.join(', ')}" if e.allowed_modes
+end
+```
+
+Capacity is bought only in the dashboard. `manage_url` and `upgrade_url` are plain strings to show your users; the SDK never opens or fetches them.
+
 ---
 
 ## 🧪 Testing

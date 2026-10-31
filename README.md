@@ -56,13 +56,15 @@ result = SmallPict.optimize(
   format: "avif",
   quality: 80,
   max_width: 1920,
-  mode: SmallPict::Mode::LOSSY, # LOSSY (default) | EXTREME | LOSSLESS; replaces the deprecated `lossless:`
+  mode: SmallPict::Mode::LOSSY, # LOSSY (default) | EXTREME | LOSSLESS | AUTO; replaces the deprecated `lossless:`
   folder: "products/shoes"      # optional, 1-3 segments; stored lower case, returned as result.folder
 )
 
 puts "Optimized CDN URL: #{result.url}"
 puts "Saved: #{result.savings_percentage}% (#{result.bytes_saved} bytes)"
 ```
+
+`AUTO` picks, per image, the lowest quality that keeps the visual score (SSIMULACRA 2) at or above 70, and ignores `quality`. It is on WP Pro and Business, Velocity, Momentum and sandbox keys (5 auto jobs per minute per sandbox key); where it cannot search (PNG or GIF output, animation, time limit) the job is lossy and `mode_applied` says so.
 
 `EXTREME` gives the smallest files on every plan. Leave `quality` out so the server uses its default for the output format; a quality you set is kept or raised to the format floor. Mode comparison: https://smallpict.app/en/docs/image-settings
 

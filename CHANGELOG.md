@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `SmallPict::Mode::AUTO` (`"auto"`, also in `Mode::ALL`): the server picks the quality per image from a visual score (CMP-07). Plans: WP Pro and Business, Velocity, Momentum and sandbox; a server without auto enabled answers `400 invalid_mode` (`ValidationError`).
 - `mode:` option on `optimize` (`"lossy"` default, `"extreme"`, `"lossless"`), with constants `SmallPict::Mode::LOSSY`, `EXTREME`, `LOSSLESS` and the frozen list `SmallPict::Mode::ALL`. The server checks the mode against the plan: `403 mode_not_in_plan` raises `PermissionDeniedError` with `details["mode"]` and `details["allowed_modes"]`; `400 invalid_mode` raises `ValidationError`.
 - `JobStatusResult#mode_applied` and `#quality_applied`, as reported by the server (`nil` for jobs created before modes existed).
 - `folder:` option on `optimize`, sent as `options.folder` and omitted when unset. The server stores the file under that folder of your account and lower-cases the value; `OptimizeResult#folder` and `JobStatusResult#folder` return it as stored (`nil` without one). The client rejects empty segments (`a//b`, leading or trailing `/`), `..` segments and more than 3 segments with `ValidationError` before any request; the server checks the full format (`400 invalid_folder` raises `ValidationError` with the server's message).

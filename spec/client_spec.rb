@@ -90,6 +90,7 @@ RSpec.describe SmallPict::Client do
       [
         ["no mode, no flag",       {},                                  nil],
         ["mode only",              { mode: "extreme" },                 "extreme"],
+        ["mode auto",              { mode: "auto" },                    "auto"],
         ["deprecated flag only",   { lossless: true },                  "lossless"],
         ["flag false is ignored",  { lossless: false },                 nil],
         ["flag agrees with mode",  { mode: "lossless", lossless: true }, "lossless"]
@@ -110,7 +111,7 @@ RSpec.describe SmallPict::Client do
       end
 
       it "accepts the Mode constants" do
-        expect(SmallPict::Mode::ALL).to eq(%w[lossy extreme lossless])
+        expect(SmallPict::Mode::ALL).to eq(%w[lossy extreme lossless auto])
         expect(SmallPict::Mode::ALL).to be_frozen
         client.optimize("img", mode: SmallPict::Mode::LOSSLESS)
         expect(sent_options["mode"]).to eq("lossless")

@@ -7,6 +7,7 @@ module SmallPict
     LOSSY    = "lossy"
     EXTREME  = "extreme"
     LOSSLESS = "lossless"
-    ALL      = [LOSSY, EXTREME, LOSSLESS].freeze
+    AUTO     = "auto" # the server picks the quality per image from a visual score (CMP-07)
+    ALL      = [LOSSY, EXTREME, LOSSLESS, AUTO].freeze
   end
 end

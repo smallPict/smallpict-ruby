@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-05
+
+### Fixed
+- **`optimize` now returns an optimized image.** `POST /v1/optimize` only queues the job and returns a pre-signed `upload_url`; the SDK stopped there, so the worker failed every job with "client upload never arrived" and callers got an empty `url` with 0 % saved. `optimize` now PUTs the bytes to `upload_url` (plain PUT with `Content-Type` and `Content-Length` as sent, no API headers, no retry), polls `GET /v1/optimize/status` every `poll_interval` (default 1 s) and returns once the job is `completed`, with `url`, `format`, `bytes_saved`, `mode_applied`, `quality_applied` and `folder` from the job status (`SDK_SPEC.md` section 3d).
+
+### Added
+- `poll_interval` (seconds, default 1) and `wait_timeout` (seconds, default 120) on `SmallPict::Client.new` and `SmallPict.configure`.
+- `OptimizeResult#mode_applied` and `#quality_applied`.
+- Error codes `job_failed` (a failed job: `SmallPict::Error` with the server's `error.message` and `details["job_id"]`) and `upload_failed` (the storage refused the PUT: `SmallPict::Error` with the HTTP status in `#status_code`). A job still running after `wait_timeout` raises `SmallPict::TimeoutError` with the job id; it keeps running on the server, and `get_job_status` reads it later. A PUT that cannot connect raises `NetworkError`.
+
+### Changed
+- **`OptimizeResult#status` is always `"completed"`** and `#upload_url` is gone: there is no result to return before the job finished. Code that checked for `"queued"` or used `upload_url` to upload by itself can drop that.
+- **An `http://` or `https://` string source raises `ValidationError`** before any request. The API never fetched URLs, so such calls failed on the server; the SDK does not download on your behalf. A source that is neither an IO, a file path nor a String of bytes raises `ValidationError` too (it used to send `filesize: 0`).
+- `compressed_size` and `savings_percentage` are derived from the bytes sent and `bytes_saved` of the job status.
+- README: "What `optimize` does".
+
 ## [0.0.7] - 2026-10-31
 
 ### Added

@@ -6,7 +6,21 @@ RSpec.describe SmallPict::Client do
   let(:api_key) { "sp_sdk_test_1234567890" }
   let(:secret_key) { "sec_test_secret_123" }
   let(:base_url) { "https://api.smallpict.app" }
-  let(:client) { described_class.new(api_key: api_key, secret_key: secret_key, base_url: base_url) }
+  let(:client) { described_class.new(api_key: api_key, secret_key: secret_key, base_url: base_url, poll_interval: 0.001) }
+  let(:upload_url) { "https://staging.s3.amazonaws.com/in/upload?X-Amz-Signature=abc" }
+
+  # optimize queues the job, PUTs the bytes to upload_url, then polls the status (SDK_SPEC.md 3d).
+  def queued_body(job_id)
+    JSON.generate({ job_id: job_id, status: "queued", upload_url: upload_url, object_key: "in/upload", bucket: "staging" })
+  end
+
+  def stub_upload_and_status(job_id, status_fields = {})
+    stub_request(:put, upload_url).to_return(status: 200)
+    stub_request(:get, "#{base_url}/v1/optimize/status?job_id=#{job_id}")
+      .to_return(status: 200, headers: { "Content-Type" => "application/json" },
+                 body: JSON.generate({ job_id: job_id, status: "completed", url: "https://cdn.smallpict.app/opt/x.webp",
+                                       format: "webp", bytes_saved: 0 }.merge(status_fields)))
+  end
 
   describe "#initialize" do
     it "raises ValidationError when api_key is missing" do
@@ -24,27 +38,18 @@ RSpec.describe SmallPict::Client do
             "X-Api-Key"       => api_key
           }
         )
-        .to_return(
-          status: 200,
-          headers: { "Content-Type" => "application/json" },
-          body: JSON.generate({
-            job_id:             "job_rb_123",
-            status:             "completed",
-            url:                "https://cdn.smallpict.app/opt/photo.avif",
-            format:             "avif",
-            original_size:      100_000,
-            compressed_size:    15_000,
-            bytes_saved:        85_000,
-            savings_percentage: 85.0
-          })
-        )
+        .to_return(status: 202, headers: { "Content-Type" => "application/json" }, body: queued_body("job_rb_123"))
+      stub_upload_and_status("job_rb_123", url: "https://cdn.smallpict.app/opt/photo.avif", format: "avif", bytes_saved: 12)
 
       result = client.optimize("fake image data", format: "avif", quality: 85)
 
       expect(result.job_id).to eq("job_rb_123")
       expect(result.status).to eq("completed")
       expect(result.url).to eq("https://cdn.smallpict.app/opt/photo.avif")
-      expect(result.savings_percentage).to eq(85.0)
+      expect(result.format).to eq("avif")
+      expect(result.original_size).to eq(15)
+      expect(result.compressed_size).to eq(3)
+      expect(result.savings_percentage).to eq(80.0)
     end
 
     it "handles fallback passthrough on 402 quota exceeded" do
@@ -72,11 +77,10 @@ RSpec.describe SmallPict::Client do
 
     # Cases from smallpict-sdk-shared/compression-modes.json (mapping_cases).
     context "compression mode mapping" do
-      let(:ok_body) { JSON.generate({ job_id: "job_mode", status: "processing" }) }
-
       before do
         stub_request(:post, "#{base_url}/v1/optimize")
-          .to_return(status: 202, headers: { "Content-Type" => "application/json" }, body: ok_body)
+          .to_return(status: 202, headers: { "Content-Type" => "application/json" }, body: queued_body("job_mode"))
+        stub_upload_and_status("job_mode")
       end
 
       def sent_options
@@ -147,8 +151,8 @@ RSpec.describe SmallPict::Client do
     context "folder" do
       before do
         stub_request(:post, "#{base_url}/v1/optimize")
-          .to_return(status: 202, headers: { "Content-Type" => "application/json" },
-                     body: JSON.generate({ job_id: "job_f", status: "processing", folder: "products/shoes" }))
+          .to_return(status: 202, headers: { "Content-Type" => "application/json" }, body: queued_body("job_f"))
+        stub_upload_and_status("job_f", folder: "products/shoes")
       end
 
       def sent_options
@@ -159,7 +163,7 @@ RSpec.describe SmallPict::Client do
         options
       end
 
-      it "sends folder as options.folder and surfaces it from the response" do
+      it "sends folder as options.folder and surfaces it from the job status" do
         result = client.optimize("img", folder: "Products/Shoes")
         expect(sent_options["folder"]).to eq("Products/Shoes")
         expect(result.folder).to eq("products/shoes")
@@ -181,8 +185,8 @@ RSpec.describe SmallPict::Client do
     context "quality" do
       before do
         stub_request(:post, "#{base_url}/v1/optimize")
-          .to_return(status: 202, headers: { "Content-Type" => "application/json" },
-                     body: JSON.generate({ job_id: "job_q", status: "processing" }))
+          .to_return(status: 202, headers: { "Content-Type" => "application/json" }, body: queued_body("job_q"))
+        stub_upload_and_status("job_q")
       end
 
       def sent_options

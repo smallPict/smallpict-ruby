@@ -6,7 +6,8 @@ require "securerandom"
 
 module SmallPict
   class Client
-    attr_reader :api_key, :secret_key, :base_url, :timeout, :max_retries, :fallback_mode
+    attr_reader :api_key, :secret_key, :base_url, :timeout, :max_retries, :fallback_mode,
+                :poll_interval, :wait_timeout
 
     def initialize(
       api_key: nil,
@@ -14,7 +15,9 @@ module SmallPict
       base_url: nil,
       timeout: nil,
       max_retries: nil,
-      fallback_mode: nil
+      fallback_mode: nil,
+      poll_interval: nil,
+      wait_timeout: nil
     )
       config = SmallPict.configuration
 
@@ -24,6 +27,8 @@ module SmallPict
       @timeout       = (timeout || config.timeout).to_i
       @max_retries   = (max_retries || config.max_retries).to_i
       @fallback_mode = (fallback_mode || config.fallback_mode).to_sym
+      @poll_interval = poll_interval || config.poll_interval
+      @wait_timeout  = wait_timeout || config.wait_timeout
 
       validate_configuration!
     end
@@ -41,12 +46,11 @@ module SmallPict
       }
 
       begin
-        res = request(:post, "/v1/optimize", payload, idempotency_key: opts.idempotency_key)
-        Models::OptimizeResult.new(res)
+        queued = request(:post, "/v1/optimize", payload, idempotency_key: opts.idempotency_key)
       rescue QuotaExceededError => e
         if @fallback_mode == :passthrough
           format_str = resolved[:mime_type].to_s.sub("image/", "")
-          Models::OptimizeResult.new(
+          return Models::OptimizeResult.new(
             job_id:             "fallback-passthrough",
             status:             "completed",
             url:                "",
@@ -61,6 +65,10 @@ module SmallPict
           raise e
         end
       end
+
+      # The worker waits 30 s from the request for the object: upload now, poll after.
+      upload(queued["upload_url"], resolved[:bytes], resolved[:mime_type])
+      wait_for_job(queued["job_id"], resolved[:filesize])
     end
 
     def get_quota
@@ -100,6 +108,64 @@ module SmallPict
     end
 
     private
+
+    # PUT the bytes to the pre-signed URL with only the two headers it was signed for:
+    # S3 refuses API headers or another type or length with 403. No retry: the worker
+    # stops waiting for the object 30 s after the job was queued.
+    def upload(url, bytes, mime_type)
+      response = connection.put(url) do |req|
+        req.headers = { "Content-Type" => mime_type, "Content-Length" => bytes.bytesize.to_s }
+        req.body = bytes
+      end
+      return if response.status >= 200 && response.status < 300
+
+      text = response.body.to_s
+      message = "Upload to staging failed with HTTP #{response.status}#{text.empty? ? "" : ": #{text}"}"
+      raise Error.new(message, code: "upload_failed", status_code: response.status)
+    rescue Faraday::TimeoutError => e
+      raise TimeoutError, "Upload to staging timed out: #{e.message}"
+    rescue Faraday::Error => e
+      raise NetworkError, e.message
+    end
+
+    def wait_for_job(job_id, original_size)
+      deadline = monotonic_now + @wait_timeout
+      loop do
+        sleep([@poll_interval, [deadline - monotonic_now, 0].max].min)
+        status = get_job_status(job_id)
+
+        case status.status
+        when "completed"
+          bytes_saved = status.bytes_saved.to_i
+          return Models::OptimizeResult.new(
+            job_id:          status.job_id || job_id,
+            status:          "completed",
+            url:             status.url || "",
+            format:          status.format || "",
+            original_size:   original_size,
+            compressed_size: original_size - bytes_saved,
+            bytes_saved:     bytes_saved,
+            mode_applied:    status.mode_applied,
+            quality_applied: status.quality_applied,
+            folder:          status.folder
+          )
+        when "failed"
+          err = status.error
+          message = err.is_a?(Hash) ? err["message"] : err
+          message = "The optimization job failed." if message.nil? || message.to_s.empty?
+          raise Error.new(message.to_s, code: "job_failed", details: { "job_id" => job_id })
+        end
+
+        if monotonic_now >= deadline
+          raise TimeoutError,
+                "Job #{job_id} did not finish within #{@wait_timeout}s; poll get_job_status(\"#{job_id}\") later."
+        end
+      end
+    end
+
+    def monotonic_now
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    end
 
     def validate_configuration!
       if @api_key.nil? || @api_key.to_s.strip.empty?
@@ -243,6 +309,10 @@ module SmallPict
       filesize = 0
       bytes = nil
 
+      if source.is_a?(String) && source.start_with?("http://", "https://")
+        raise ValidationError, "the API does not fetch URLs; download the image and pass its bytes"
+      end
+
       if source.respond_to?(:read)
         bytes = source.read
         filesize = bytes.bytesize
@@ -257,6 +327,8 @@ module SmallPict
           bytes = source
           filesize = bytes.bytesize
         end
+      else
+        raise ValidationError, "Unsupported image source: pass an IO, a file path or the image bytes as a String"
       end
 
       {

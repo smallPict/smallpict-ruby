@@ -2,7 +2,8 @@
 
 module SmallPict
   class Configuration
-    attr_accessor :api_key, :secret_key, :base_url, :timeout, :max_retries, :fallback_mode
+    attr_accessor :api_key, :secret_key, :base_url, :timeout, :max_retries, :fallback_mode,
+                  :poll_interval, :wait_timeout
 
     def initialize
       @api_key       = ENV["SMALLPICT_API_KEY"]
@@ -11,6 +12,8 @@ module SmallPict
       @timeout       = 30
       @max_retries   = 3
       @fallback_mode = :throw
+      @poll_interval = 1   # seconds between job status polls in optimize
+      @wait_timeout  = 120 # seconds optimize waits for the job before TimeoutError
     end
   end
 end

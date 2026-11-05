@@ -24,7 +24,7 @@ Official Ruby gem for the [SmallPict Image Optimization API](https://smallpict.a
 Add to your application's `Gemfile`:
 
 ```ruby
-gem "smallpict", "~> 0.0.2"
+gem "smallpict", "~> 0.1.0"
 ```
 
 And then execute:
@@ -64,6 +64,18 @@ puts "Optimized CDN URL: #{result.url}"
 puts "Saved: #{result.savings_percentage}% (#{result.bytes_saved} bytes)"
 ```
 
+#### What `optimize` does
+
+`optimize` returns a finished job. It sends the request, uploads the bytes to the pre-signed `upload_url` the API returns, then polls the job status every `poll_interval` seconds (default 1) until the job is completed, for at most `wait_timeout` seconds (default 120). The result has `status == "completed"`, `url`, `format`, `bytes_saved`, `mode_applied`, `quality_applied` and `folder` from the job status, plus `original_size` (the bytes you sent), `compressed_size` and `savings_percentage`.
+
+- Pass the image as bytes (a String), an IO (`File`, `Tempfile`, `StringIO`) or a local file path. An `http://` or `https://` URL raises `SmallPict::ValidationError`: the API does not fetch URLs, so download the image and pass its bytes.
+- A failed job raises `SmallPict::Error` with `code == "job_failed"`, the server's message and `details["job_id"]`. A refused upload raises `SmallPict::Error` with `code == "upload_failed"` and the HTTP status in `status_code`.
+- A job still running after `wait_timeout` raises `SmallPict::TimeoutError` with the job id in the message. The job keeps running on the server; read it later with `SmallPict.get_job_status(job_id)`.
+
+```ruby
+client = SmallPict::Client.new(api_key: ENV["SMALLPICT_API_KEY"], poll_interval: 2, wait_timeout: 60)
+```
+
 `AUTO` picks, per image, the lowest quality that keeps the visual score (SSIMULACRA 2) at or above 70, and ignores `quality`. It is on WP Pro and Business, Velocity, Momentum and sandbox keys (5 auto jobs per minute per sandbox key); where it cannot search (PNG or GIF output, animation, time limit) the job is lossy and `mode_applied` says so.
 
 `EXTREME` gives the smallest files on every plan. Leave `quality` out so the server uses its default for the output format; a quality you set is kept or raised to the format floor. Mode comparison: https://smallpict.app/en/docs/image-settings
@@ -83,6 +95,8 @@ SmallPict.configure do |config|
   config.api_key       = Rails.application.credentials.dig(:smallpict, :api_key)
   config.secret_key    = Rails.application.credentials.dig(:smallpict, :secret_key)
   config.fallback_mode = :passthrough # :throw | :passthrough
+  config.poll_interval = 1   # seconds between job status polls in optimize
+  config.wait_timeout  = 120 # seconds optimize waits before SmallPict::TimeoutError
 end
 ```
 

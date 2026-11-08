@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `mime_type` is detected when the caller gives none: from the first bytes (PNG, JPEG, GIF, WebP, AVIF), then from the filename extension, then `image/jpeg`. A PNG passed as bytes or a Tempfile was declared and uploaded as `image/jpeg`. An explicit `mime_type:` still wins.
 - `Retry-After` is capped at 30 seconds (`Client::MAX_RETRY_AFTER`). A 429 or 5xx with `Retry-After: 60` slept a Puma thread for a minute per attempt, up to three times in one request; the retry now waits at most 30 s.
 - Every request carries a fresh `X-Nonce`, so a retry inside the same second is no longer refused by the server as a replay (401 "Replay attack detected"); before, a transient 429 or 5xx could surface as `AuthenticationError`. `Idempotency-Key` is generated once per call and kept across retries instead of once per attempt.
 - `SmallPict::Client#inspect` and `SmallPict::Configuration#inspect` (and `to_s`) no longer print the API key and secret key; they show the base URL only. `Error.sanitize` also masks server-issued `sps_...` secrets, not only the `sec_`/`secret_` fixtures.

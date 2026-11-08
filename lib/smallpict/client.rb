@@ -314,7 +314,7 @@ module SmallPict
 
     def resolve_source(source, options)
       filename = options.filename || "image.jpg"
-      mime_type = options.mime_type || (options.respond_to?(:content_type) ? options.content_type : nil) || "image/jpeg"
+      explicit_mime = options.mime_type || (options.respond_to?(:content_type) ? options.content_type : nil)
       filesize = 0
       bytes = nil
 
@@ -344,10 +344,34 @@ module SmallPict
 
       {
         filename:  filename,
-        mime_type: mime_type,
+        mime_type: explicit_mime || detect_mime(bytes) || extension_mime(filename) || "image/jpeg",
         filesize:  filesize,
         bytes:     bytes
       }
+    end
+
+    MAGIC_MIMES = {
+      "\x89PNG".b => "image/png",
+      "\xFF\xD8\xFF".b => "image/jpeg",
+      "GIF8".b => "image/gif"
+    }.freeze
+
+    EXTENSION_MIMES = {
+      ".png" => "image/png", ".jpg" => "image/jpeg", ".jpeg" => "image/jpeg", ".gif" => "image/gif",
+      ".webp" => "image/webp", ".avif" => "image/avif", ".svg" => "image/svg+xml"
+    }.freeze
+
+    def detect_mime(bytes)
+      head = bytes.byteslice(0, 12).to_s.b
+      MAGIC_MIMES.each { |magic, mime| return mime if head.start_with?(magic) }
+      return "image/webp" if head.start_with?("RIFF".b) && head.byteslice(8, 4) == "WEBP".b
+      return "image/avif" if head.byteslice(4, 8) == "ftypavif".b
+
+      nil
+    end
+
+    def extension_mime(filename)
+      EXTENSION_MIMES[File.extname(filename.to_s).downcase]
     end
   end
 end

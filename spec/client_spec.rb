@@ -433,3 +433,41 @@ RSpec.describe SmallPict::Client, "Retry-After cap" do
     expect(delays.max).to be <= 30.2
   end
 end
+
+RSpec.describe SmallPict::Client, "mime detection" do
+  let(:base_url) { "https://api.smallpict.app" }
+  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, poll_interval: 0.001) }
+  let(:upload_url) { "https://staging.s3.amazonaws.com/in/upload?X-Amz-Signature=abc" }
+
+  def optimize_and_record(source, **opts)
+    posts = []
+    puts_seen = []
+    stub_request(:post, "#{base_url}/v1/optimize").with { |req| posts << JSON.parse(req.body) }
+      .to_return(status: 202, headers: { "Content-Type" => "application/json" },
+                 body: JSON.generate({ job_id: "j1", status: "queued", upload_url: upload_url, object_key: "k", bucket: "b" }))
+    stub_request(:put, upload_url).with { |req| puts_seen << req.headers["Content-Type"] }.to_return(status: 200)
+    stub_request(:get, "#{base_url}/v1/optimize/status?job_id=j1")
+      .to_return(status: 200, headers: { "Content-Type" => "application/json" },
+                 body: JSON.generate({ job_id: "j1", status: "completed", url: "https://cdn/x", format: "webp", bytes_saved: 1 }))
+    client.optimize(source, **opts)
+    [posts.first["mime_type"], puts_seen.first]
+  end
+
+  it "detects PNG from the bytes" do
+    expect(optimize_and_record("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR".b)).to eq(%w[image/png image/png])
+  end
+
+  it "detects GIF and WebP from the bytes" do
+    expect(optimize_and_record("GIF89a\x00\x00".b).first).to eq("image/gif")
+    expect(optimize_and_record("RIFF\x00\x00\x00\x00WEBPVP8 ".b).first).to eq("image/webp")
+  end
+
+  it "falls back to the filename extension, then image/jpeg" do
+    expect(optimize_and_record("not an image".b, filename: "a.avif").first).to eq("image/avif")
+    expect(optimize_and_record("not an image".b).first).to eq("image/jpeg")
+  end
+
+  it "keeps an explicit mime_type" do
+    expect(optimize_and_record("\x89PNG\r\n\x1a\n".b, mime_type: "image/webp").first).to eq("image/webp")
+  end
+end

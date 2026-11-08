@@ -105,7 +105,7 @@ module SmallPict
     def validate_key
       get_quota
       true
-    rescue StandardError
+    rescue AuthenticationError, PermissionDeniedError
       false
     end
 
@@ -255,6 +255,8 @@ module SmallPict
             sleep(base_delay * (2**(attempt - 1)))
             next
           end
+          raise NetworkError, e.message
+        rescue Faraday::Error => e
           raise NetworkError, e.message
         end
       end

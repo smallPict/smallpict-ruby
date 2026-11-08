@@ -556,3 +556,21 @@ RSpec.describe SmallPict::Client, "status path signing" do
     expect(client.get_job_status("a&b=c").status).to eq("processing")
   end
 end
+
+RSpec.describe SmallPict::Client, "transport errors" do
+  let(:base_url) { "https://api.smallpict.app" }
+  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, max_retries: 0) }
+
+  it "wraps every Faraday error in NetworkError" do
+    stub_request(:get, "#{base_url}/v1/quota").to_raise(Faraday::SSLError.new("certificate verify failed"))
+    expect { client.get_quota }.to raise_error(SmallPict::NetworkError, /certificate verify failed/)
+  end
+
+  it "lets validate_key surface an outage instead of answering false" do
+    stub_request(:get, "#{base_url}/v1/quota").to_raise(Faraday::ConnectionFailed.new("refused"))
+    expect { client.validate_key }.to raise_error(SmallPict::NetworkError)
+
+    stub_request(:get, "#{base_url}/v1/quota").to_return(status: 403, body: JSON.generate({ error: { message: "revoked" } }))
+    expect(client.validate_key).to be false
+  end
+end

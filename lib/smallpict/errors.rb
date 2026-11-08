@@ -38,7 +38,8 @@ module SmallPict
         end
       end
 
-      sanitized = sanitized.gsub(/(sec|secret)_[a-zA-Z0-9_-]{8,}/i, "***REDACTED***")
+      # Server-issued secrets are "sps_" + hex; sec_/secret_ are the test fixtures.
+      sanitized = sanitized.gsub(/(sps_[a-f0-9]{16,}|(sec|secret)_[a-zA-Z0-9_-]{8,})/i, "***REDACTED***")
       sanitized.gsub(/Bearer\s+[a-zA-Z0-9._-]+/i, "Bearer ***REDACTED***")
     end
   end

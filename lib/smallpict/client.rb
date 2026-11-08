@@ -9,6 +9,11 @@ module SmallPict
     attr_reader :api_key, :secret_key, :base_url, :timeout, :max_retries, :fallback_mode,
                 :poll_interval, :wait_timeout
 
+    def inspect
+      "#<#{self.class.name} base_url=#{@base_url.inspect}>"
+    end
+    alias to_s inspect
+
     def initialize(
       api_key: nil,
       secret_key: nil,

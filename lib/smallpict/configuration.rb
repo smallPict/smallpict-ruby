@@ -15,5 +15,10 @@ module SmallPict
       @poll_interval = 1   # seconds between job status polls in optimize
       @wait_timeout  = 120 # seconds optimize waits for the job before TimeoutError
     end
+
+    def inspect
+      "#<#{self.class.name} base_url=#{@base_url.inspect}>"
+    end
+    alias to_s inspect
   end
 end

@@ -37,3 +37,29 @@ RSpec.describe SmallPict::Error do
     end
   end
 end
+
+RSpec.describe "credential redaction" do
+  it "masks sps_ secret keys in error messages" do
+    secret = "sps_#{"ab12" * 16}"
+    expect(SmallPict::Error.sanitize("bad key #{secret}")).not_to include(secret)
+  end
+
+  it "does not print the keys when a client is inspected" do
+    client = SmallPict::Client.new(api_key: "sp_sdk_test_1234567890", secret_key: "sps_1234567890abcdef1234567890abcdef")
+    [client.inspect, client.to_s].each do |text|
+      expect(text).not_to include("sp_sdk_test_1234567890")
+      expect(text).not_to include("sps_1234567890abcdef1234567890abcdef")
+    end
+  end
+
+  it "does not print the keys when the configuration is inspected" do
+    SmallPict.configure do |c|
+      c.api_key = "sp_sdk_test_1234567890"
+      c.secret_key = "sps_1234567890abcdef1234567890abcdef"
+    end
+    [SmallPict.configuration.inspect, SmallPict.configuration.to_s].each do |text|
+      expect(text).not_to include("sp_sdk_test_1234567890")
+      expect(text).not_to include("sps_1234567890abcdef1234567890abcdef")
+    end
+  end
+end

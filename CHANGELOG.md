@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `SmallPict::Client#inspect` and `SmallPict::Configuration#inspect` (and `to_s`) no longer print the API key and secret key; they show the base URL only. `Error.sanitize` also masks server-issued `sps_...` secrets, not only the `sec_`/`secret_` fixtures.
 - `optimize(bytes)` no longer raises `ArgumentError: path name contains null byte` for real image data. A String source was probed with `File.exist?`, which refuses the NUL bytes every PNG and JPEG header contains, so `SmallPict.optimize(File.binread("x.png"))` crashed before any request. A String is now sent as bytes unless it is NUL-free and names an existing file; a `Pathname` is read from disk and its basename becomes `filename`.
 
 ### Removed

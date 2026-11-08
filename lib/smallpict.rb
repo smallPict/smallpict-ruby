@@ -22,6 +22,7 @@ module SmallPict
 
     def configure
       yield(configuration)
+      @default_client = nil # the next SmallPict.client picks up the new values
     end
 
     def reset_configuration!

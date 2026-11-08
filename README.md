@@ -40,6 +40,8 @@ gem install smallpict
 
 ### 1. Global Block Configuration & Standalone Ruby
 
+`SmallPict.configure` is process-global: every `SmallPict.optimize` call in the process shares it. Code that serves several tenants with different keys builds its own `SmallPict::Client.new(api_key: ..., secret_key: ...)` per tenant.
+
 ```ruby
 require "smallpict"
 

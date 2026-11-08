@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `SmallPict.configure` takes effect after the first module-level call too. The memoised default client was never rebuilt, so a second `configure` (per-tenant rake task, test suite) kept the first keys.
 - The signature covers the request path without the query string, as the contract says; the status poll used to sign `/v1/optimize/status?job_id=...`, which only worked through a server-side fallback. `get_job_status` URL-encodes the job id instead of interpolating it raw into the query.
 - A 2xx response whose body is not JSON (a proxy or WAF page) raises `SmallPict::Error` with code `invalid_response` instead of being read as an empty result: `get_quota` returned plan `"free"`, `validate_key` returned `true` and `optimize` polled a phantom job until `wait_timeout`.
 - `mime_type` is detected when the caller gives none: from the first bytes (PNG, JPEG, GIF, WebP, AVIF), then from the filename extension, then `image/jpeg`. A PNG passed as bytes or a Tempfile was declared and uploaded as `image/jpeg`. An explicit `mime_type:` still wins.

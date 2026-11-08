@@ -24,3 +24,16 @@ RSpec.describe SmallPict do
     end
   end
 end
+
+RSpec.describe SmallPict, ".configure after first use" do
+  it "rebuilds the default client" do
+    described_class.configure do |c|
+      c.api_key = "sp_sdk_first_1234567890"
+      c.secret_key = "sec_test_secret"
+    end
+    expect(described_class.client.api_key).to eq("sp_sdk_first_1234567890")
+
+    described_class.configure { |c| c.api_key = "sp_sdk_second_1234567890" }
+    expect(described_class.client.api_key).to eq("sp_sdk_second_1234567890")
+  end
+end

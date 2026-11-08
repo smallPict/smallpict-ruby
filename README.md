@@ -71,6 +71,7 @@ puts "Saved: #{result.savings_percentage}% (#{result.bytes_saved} bytes)"
 - Pass the image as bytes (a String), an IO (`File`, `Tempfile`, `StringIO`) or a local file path. An `http://` or `https://` URL raises `SmallPict::ValidationError`: the API does not fetch URLs, so download the image and pass its bytes.
 - A failed job raises `SmallPict::Error` with `code == "job_failed"`, the server's message and `details["job_id"]`. A refused upload raises `SmallPict::Error` with `code == "upload_failed"` and the HTTP status in `status_code`.
 - A job still running after `wait_timeout` raises `SmallPict::TimeoutError` with the job id in the message. The job keeps running on the server; read it later with `SmallPict.get_job_status(job_id)`.
+- A retry after a 5xx may create a second job until the server honours `Idempotency-Key`.
 
 ```ruby
 client = SmallPict::Client.new(api_key: ENV["SMALLPICT_API_KEY"], poll_interval: 2, wait_timeout: 60)

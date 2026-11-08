@@ -385,3 +385,24 @@ RSpec.describe SmallPict::Client, "source handling" do
     expect(posts.first["filesize"]).to eq(9)
   end
 end
+
+RSpec.describe SmallPict::Client, "retry headers" do
+  let(:base_url) { "https://api.smallpict.app" }
+  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, max_retries: 1) }
+
+  it "sends a new X-Nonce and the same Idempotency-Key on a retry" do
+    seen = []
+    stub_request(:post, "#{base_url}/v1/purge").with { |req| seen << req.headers }
+      .to_return({ status: 503, body: JSON.generate({ error: { code: "INTERNAL_ERROR", message: "try again" } }) },
+                 { status: 202, body: JSON.generate({ message: "Purge accepted" }) })
+    allow(client).to receive(:sleep)
+
+    client.purge_cdn(purge_type: "all")
+
+    expect(seen.length).to eq(2)
+    nonces = seen.map { |h| h["X-Nonce"] }
+    expect(nonces).to all(be_a(String))
+    expect(nonces.uniq.length).to eq(2)
+    expect(seen[0]["Idempotency-Key"]).to eq(seen[1]["Idempotency-Key"])
+  end
+end

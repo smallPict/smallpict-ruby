@@ -186,6 +186,7 @@ module SmallPict
       body_str = body ? JSON.generate(body) : nil
       body_hash = body_str ? Crypto.sha256_hex(body_str) : Crypto::EMPTY_SHA256
 
+      idempotency_key ||= SecureRandom.uuid
       attempt = 0
       base_delay = 0.25 # 250ms
 
@@ -209,8 +210,10 @@ module SmallPict
             headers["Authorization"] = "Bearer #{@api_key}"
           end
 
+          # The server rejects a repeated signature as a replay unless the nonce differs.
+          headers["X-Nonce"] = SecureRandom.uuid
           if %i[post patch delete].include?(method.to_s.downcase.to_sym)
-            headers["Idempotency-Key"] = idempotency_key || SecureRandom.uuid
+            headers["Idempotency-Key"] = idempotency_key
           end
 
           response = connection.send(method.to_s.downcase.to_sym, url) do |req|

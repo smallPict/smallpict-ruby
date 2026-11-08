@@ -3,6 +3,7 @@
 require "faraday"
 require "json"
 require "securerandom"
+require "uri"
 
 module SmallPict
   class Client
@@ -111,7 +112,7 @@ module SmallPict
     def get_job_status(job_id)
       raise ValidationError, "job_id is required" if job_id.nil? || job_id.to_s.empty?
 
-      res = request(:get, "/v1/optimize/status?job_id=#{job_id}")
+      res = request(:get, "/v1/optimize/status?job_id=#{URI.encode_www_form_component(job_id)}")
       Models::JobStatusResult.new(res)
     end
 
@@ -207,7 +208,7 @@ module SmallPict
           }
           headers["Content-Type"] = "application/json" if body_str
 
-          string_to_sign = Crypto.build_string_to_sign(method, clean_path, timestamp, body_hash)
+          string_to_sign = Crypto.build_string_to_sign(method, clean_path.split("?", 2).first, timestamp, body_hash)
           headers["X-Timestamp"] = timestamp
           headers["X-Signature"] = Crypto.hmac_sha256_hex(@secret_key, string_to_sign)
 

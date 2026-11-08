@@ -533,3 +533,26 @@ RSpec.describe SmallPict::Client, "signing and mapping" do
     expect { client.get_quota }.to raise_error(SmallPict::Error) { |e| expect(e.code).to eq("invalid_response") }
   end
 end
+
+RSpec.describe SmallPict::Client, "status path signing" do
+  let(:base_url) { "https://api.smallpict.app" }
+  let(:secret) { "sec_test_secret_123" }
+  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: secret, base_url: base_url) }
+
+  it "signs the status path without the query string" do
+    allow(Time).to receive(:now).and_return(Time.at(1_716_301_234))
+    sts = SmallPict::Crypto.build_string_to_sign(:get, "/v1/optimize/status", "1716301234", SmallPict::Crypto::EMPTY_SHA256)
+    stub_request(:get, "#{base_url}/v1/optimize/status?job_id=j1")
+      .with(headers: { "X-Signature" => SmallPict::Crypto.hmac_sha256_hex(secret, sts) })
+      .to_return(status: 200, body: JSON.generate({ job_id: "j1", status: "processing" }))
+
+    expect(client.get_job_status("j1").status).to eq("processing")
+  end
+
+  it "URL-encodes the job id" do
+    stub_request(:get, "#{base_url}/v1/optimize/status?job_id=a%26b%3Dc")
+      .to_return(status: 200, body: JSON.generate({ job_id: "a&b=c", status: "processing" }))
+
+    expect(client.get_job_status("a&b=c").status).to eq("processing")
+  end
+end

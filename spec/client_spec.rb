@@ -344,3 +344,44 @@ RSpec.describe SmallPict::Client do
     end
   end
 end
+
+RSpec.describe SmallPict::Client, "source handling" do
+  let(:base_url) { "https://api.smallpict.app" }
+  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, poll_interval: 0.001) }
+  let(:upload_url) { "https://staging.s3.amazonaws.com/in/upload?X-Amz-Signature=abc" }
+  let(:png_bytes) { "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR".b }
+
+  def stub_flow
+    posts = []
+    stub_request(:post, "#{base_url}/v1/optimize").with { |req| posts << JSON.parse(req.body) }
+      .to_return(status: 202, headers: { "Content-Type" => "application/json" },
+                 body: JSON.generate({ job_id: "j1", status: "queued", upload_url: upload_url, object_key: "k", bucket: "b" }))
+    stub_request(:put, upload_url).to_return(status: 200)
+    stub_request(:get, "#{base_url}/v1/optimize/status?job_id=j1")
+      .to_return(status: 200, headers: { "Content-Type" => "application/json" },
+                 body: JSON.generate({ job_id: "j1", status: "completed", url: "https://cdn/x.avif", format: "avif", bytes_saved: 1 }))
+    posts
+  end
+
+  it "sends a String with a PNG header as raw bytes" do
+    posts = stub_flow
+    client.optimize(png_bytes, mime_type: "image/png")
+    expect(posts.first["filesize"]).to eq(png_bytes.bytesize)
+  end
+
+  it "reads a Pathname source from disk" do
+    posts = stub_flow
+    file = Tempfile.new(["img", ".png"], binmode: true)
+    file.write(png_bytes)
+    file.close
+    client.optimize(Pathname.new(file.path))
+    expect(posts.first["filesize"]).to eq(png_bytes.bytesize)
+    expect(posts.first["filename"]).to eq(File.basename(file.path))
+  end
+
+  it "sends a String that is not an existing file as bytes" do
+    posts = stub_flow
+    client.optimize("photo.jpg")
+    expect(posts.first["filesize"]).to eq(9)
+  end
+end

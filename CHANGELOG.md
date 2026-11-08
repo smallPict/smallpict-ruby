@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `optimize(bytes)` no longer raises `ArgumentError: path name contains null byte` for real image data. A String source was probed with `File.exist?`, which refuses the NUL bytes every PNG and JPEG header contains, so `SmallPict.optimize(File.binread("x.png"))` crashed before any request. A String is now sent as bytes unless it is NUL-free and names an existing file; a `Pathname` is read from disk and its basename becomes `filename`.
+
 ### Changed
 - Release workflow runs `bundle exec rspec` before `gem build`, passes the RubyGems key through `GEM_HOST_API_KEY` instead of writing `~/.gem/credentials`, restricts the token to `contents: read`, and pins actions to commit SHAs.
 

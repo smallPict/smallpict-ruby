@@ -316,9 +316,11 @@ module SmallPict
       if source.respond_to?(:read)
         bytes = source.read
         filesize = bytes.bytesize
-        filename = File.basename(source.path) if source.respond_to?(:path) && options.filename.nil?
+        path = source.respond_to?(:to_path) ? source.to_path : (source.path if source.respond_to?(:path))
+        filename = File.basename(path) if path && options.filename.nil?
       elsif source.is_a?(String)
-        if File.exist?(source) && File.file?(source)
+        # Image bytes hold NUL, which File.file? refuses with ArgumentError; only probe a plausible path.
+        if !source.include?("\0") && File.file?(source)
           filename = File.basename(source) if options.filename.nil?
           bytes = File.binread(source)
           filesize = bytes.bytesize

@@ -50,6 +50,7 @@ SmallPict.configure do |config|
 end
 
 image_data = File.binread("hero-banner.png")
+# A source can be the image bytes (String), an open File or IO, or a Pathname.
 
 result = SmallPict.optimize(
   image_data,

@@ -64,6 +64,7 @@ RSpec.describe SmallPict::Client do
 
       passthrough_client = described_class.new(
         api_key:       api_key,
+        secret_key:    secret_key,
         base_url:      base_url,
         fallback_mode: :passthrough
       )
@@ -404,5 +405,13 @@ RSpec.describe SmallPict::Client, "retry headers" do
     expect(nonces).to all(be_a(String))
     expect(nonces.uniq.length).to eq(2)
     expect(seen[0]["Idempotency-Key"]).to eq(seen[1]["Idempotency-Key"])
+  end
+end
+
+RSpec.describe SmallPict::Client, "secret key" do
+  it "raises ValidationError when secret_key is missing" do
+    SmallPict.configuration.secret_key = nil
+    expect { described_class.new(api_key: "sp_sdk_test_1234567890") }
+      .to raise_error(SmallPict::ValidationError, /secret key/)
   end
 end

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SmallPict::ActiveStorage::Service`. It was not an `ActiveStorage::Service` (no `upload`, `download`, `delete`, `exist?`, `url`; not configurable from `config/storage.yml`), and its `url_for` sent an empty body that the API rejects with 400, so it always raised. Use `SmallPict.optimize` on the bytes you hold.
 
 ### Changed
+- **`secret_key` is required.** `SmallPict::Client.new` raises `ValidationError` when neither `secret_key:`, `SmallPict.configure` nor `SMALLPICT_SECRET_KEY` provides one. The Bearer-only mode (API key without signature) is gone: the API refuses it with 403 "Legacy Bearer token format is no longer supported", so a client built that way never worked. README examples pass both keys.
 - Release workflow runs `bundle exec rspec` before `gem build`, passes the RubyGems key through `GEM_HOST_API_KEY` instead of writing `~/.gem/credentials`, restricts the token to `contents: read`, and pins actions to commit SHAs.
 
 ## [0.1.0] - 2026-11-05

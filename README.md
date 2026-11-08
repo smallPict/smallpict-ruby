@@ -11,7 +11,7 @@ Official Ruby gem for the [SmallPict Image Optimization API](https://smallpict.a
 ## ⚡ Features
 
 - **💎 Idiomatic Ruby Design:** Block-based configuration (`SmallPict.configure`) and flexible standalone instances.
-- **🛡️ Secure HMAC-SHA256 & Bearer Auth:** Tamper-proof payload verification.
+- **🛡️ HMAC-SHA256 request signing:** every request is signed with your secret key; both `api_key` and `secret_key` are required.
 - **✨ 4 Core Unified Methods:** `optimize()`, `get_quota()`, `purge_cdn()`, and `validate_key()`.
 - **🔄 Resilience & Fault Tolerance:** Automatic `Idempotency-Key` UUID injection, 30s timeouts, and exponential backoff with jitter on HTTP 429/5xx.
 - **🔒 Zero-Leak Privacy:** API keys and credentials are automatically redacted from `to_s` and `inspect` error logs.
@@ -45,7 +45,7 @@ require "smallpict"
 
 SmallPict.configure do |config|
   config.api_key    = ENV["SMALLPICT_API_KEY"]
-  config.secret_key = ENV["SMALLPICT_SECRET_KEY"] # Optional HMAC Secret Key
+  config.secret_key = ENV["SMALLPICT_SECRET_KEY"]
 end
 
 image_data = File.binread("hero-banner.png")
@@ -74,7 +74,8 @@ puts "Saved: #{result.savings_percentage}% (#{result.bytes_saved} bytes)"
 - A retry after a 5xx may create a second job until the server honours `Idempotency-Key`.
 
 ```ruby
-client = SmallPict::Client.new(api_key: ENV["SMALLPICT_API_KEY"], poll_interval: 2, wait_timeout: 60)
+client = SmallPict::Client.new(api_key: ENV["SMALLPICT_API_KEY"], secret_key: ENV["SMALLPICT_SECRET_KEY"],
+                               poll_interval: 2, wait_timeout: 60)
 ```
 
 `AUTO` picks, per image, the lowest quality that keeps the visual score (SSIMULACRA 2) at or above 70, and ignores `quality`. It is on WP Pro and Business, Velocity, Momentum and sandbox keys (5 auto jobs per minute per sandbox key); where it cannot search (PNG or GIF output, animation, time limit) the job is lossy and `mode_applied` says so.

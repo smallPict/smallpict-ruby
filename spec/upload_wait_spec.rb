@@ -113,7 +113,7 @@ RSpec.describe SmallPict::Client, "#optimize upload and wait" do
   end
 
   it "defaults poll_interval to 1 s and wait_timeout to 120 s" do
-    c = described_class.new(api_key: api_key)
+    c = described_class.new(api_key: api_key, secret_key: secret_key)
     expect(c.poll_interval).to eq(1)
     expect(c.wait_timeout).to eq(120)
   end

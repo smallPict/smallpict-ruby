@@ -176,6 +176,9 @@ module SmallPict
       if @api_key.nil? || @api_key.to_s.strip.empty?
         raise ValidationError, "Missing required SmallPict API key. Provide `api_key:` or configure via `SmallPict.configure`."
       end
+      return unless @secret_key.nil? || @secret_key.to_s.strip.empty?
+
+      raise ValidationError, "Missing required SmallPict secret key. Provide `secret_key:` or set SMALLPICT_SECRET_KEY."
     end
 
     def request(method, path, body = nil, idempotency_key: nil)
@@ -201,14 +204,9 @@ module SmallPict
           }
           headers["Content-Type"] = "application/json" if body_str
 
-          if @secret_key
-            string_to_sign = Crypto.build_string_to_sign(method, clean_path, timestamp, body_hash)
-            signature = Crypto.hmac_sha256_hex(@secret_key, string_to_sign)
-            headers["X-Timestamp"] = timestamp
-            headers["X-Signature"] = signature
-          else
-            headers["Authorization"] = "Bearer #{@api_key}"
-          end
+          string_to_sign = Crypto.build_string_to_sign(method, clean_path, timestamp, body_hash)
+          headers["X-Timestamp"] = timestamp
+          headers["X-Signature"] = Crypto.hmac_sha256_hex(@secret_key, string_to_sign)
 
           # The server rejects a repeated signature as a replay unless the nonce differs.
           headers["X-Nonce"] = SecureRandom.uuid

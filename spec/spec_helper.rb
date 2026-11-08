@@ -4,6 +4,7 @@ require "smallpict"
 require "webmock/rspec"
 require "tempfile"
 require "pathname"
+require "stringio"
 
 WebMock.disable_net_connect!(allow_localhost: true)
 

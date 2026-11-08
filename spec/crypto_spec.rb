@@ -30,3 +30,15 @@ RSpec.describe SmallPict::Crypto do
     end
   end
 end
+
+RSpec.describe SmallPict::Crypto, "known answers" do
+  it "matches RFC 4231 test case 2" do
+    expect(described_class.hmac_sha256_hex("Jefe", "what do ya want for nothing?"))
+      .to eq("5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843")
+  end
+
+  it "signs the documented string-to-sign" do
+    sts = described_class.build_string_to_sign(:post, "/v1/optimize", "1716301234", SmallPict::Crypto::EMPTY_SHA256)
+    expect(sts).to eq("POST\n/v1/optimize\n1716301234\n#{SmallPict::Crypto::EMPTY_SHA256}")
+  end
+end

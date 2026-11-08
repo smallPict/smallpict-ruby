@@ -471,3 +471,65 @@ RSpec.describe SmallPict::Client, "mime detection" do
     expect(optimize_and_record("\x89PNG\r\n\x1a\n".b, mime_type: "image/webp").first).to eq("image/webp")
   end
 end
+
+RSpec.describe SmallPict::Client, "signing and mapping" do
+  let(:base_url) { "https://api.smallpict.app" }
+  let(:secret) { "sec_test_secret_123" }
+  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: secret, base_url: base_url, max_retries: 1) }
+  let(:quota_body) { JSON.generate({ plan: "free", bytes_used: 0, quota_limit: 1, quota_percentage: 0.0 }) }
+
+  it "sends the HMAC of method, path, timestamp and body hash" do
+    allow(Time).to receive(:now).and_return(Time.at(1_716_301_234))
+    sts = SmallPict::Crypto.build_string_to_sign(:get, "/v1/quota", "1716301234", SmallPict::Crypto::EMPTY_SHA256)
+    expected = SmallPict::Crypto.hmac_sha256_hex(secret, sts)
+    stub_request(:get, "#{base_url}/v1/quota")
+      .with(headers: { "X-Timestamp" => "1716301234", "X-Signature" => expected, "X-Api-Key" => "sp_sdk_test_1234567890" })
+      .to_return(status: 200, body: quota_body)
+
+    expect(client.get_quota.plan).to eq("free")
+  end
+
+  { 401 => SmallPict::AuthenticationError, 404 => SmallPict::NotFoundError, 500 => SmallPict::ServerError }.each do |status, klass|
+    it "maps HTTP #{status} to #{klass}" do
+      stub_request(:get, "#{base_url}/v1/quota")
+        .to_return(status: status, body: JSON.generate({ error: { code: "X", message: "m" } }))
+      allow(client).to receive(:sleep)
+      expect { client.get_quota }.to raise_error(klass)
+    end
+  end
+
+  it "retries a 5xx once and succeeds" do
+    stub_request(:get, "#{base_url}/v1/quota")
+      .to_return({ status: 503, body: "{}" }, { status: 200, body: quota_body })
+    allow(client).to receive(:sleep)
+    expect(client.get_quota.plan).to eq("free")
+    expect(WebMock).to have_requested(:get, "#{base_url}/v1/quota").twice
+  end
+
+  it "reads File, Tempfile and StringIO sources" do
+    posts = []
+    upload_url = "https://staging.s3.amazonaws.com/in/upload?X-Amz-Signature=abc"
+    stub_request(:post, "#{base_url}/v1/optimize").with { |req| posts << JSON.parse(req.body) }
+      .to_return(status: 202, headers: { "Content-Type" => "application/json" },
+                 body: JSON.generate({ job_id: "j1", status: "queued", upload_url: upload_url, object_key: "k", bucket: "b" }))
+    stub_request(:put, upload_url).to_return(status: 200)
+    stub_request(:get, "#{base_url}/v1/optimize/status?job_id=j1")
+      .to_return(status: 200, body: JSON.generate({ job_id: "j1", status: "completed", url: "u", format: "webp", bytes_saved: 1 }))
+    c = described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: secret, base_url: base_url, poll_interval: 0.001)
+
+    tmp = Tempfile.new(["img", ".png"], binmode: true)
+    tmp.write("12345")
+    tmp.rewind
+    c.optimize(tmp)
+    c.optimize(File.open(tmp.path, "rb"))
+    c.optimize(StringIO.new("1234567"))
+
+    expect(posts.map { |p| p["filesize"] }).to eq([5, 5, 7])
+    expect(posts[0]["filename"]).to eq(File.basename(tmp.path))
+  end
+
+  it "does not turn a non-JSON 2xx body into a quota of plan free" do
+    stub_request(:get, "#{base_url}/v1/quota").to_return(status: 200, body: "<html>proxy</html>")
+    expect { client.get_quota }.to raise_error(SmallPict::Error) { |e| expect(e.code).to eq("invalid_response") }
+  end
+end

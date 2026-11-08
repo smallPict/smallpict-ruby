@@ -241,6 +241,10 @@ module SmallPict
           if status < 200 || status >= 300
             handle_error_response(status, parsed, request_id, retry_after)
           end
+          if parsed.key?("raw")
+            raise Error.new("Expected a JSON body, got: #{parsed["raw"].to_s[0, 200]}",
+                            code: "invalid_response", status_code: status, request_id: request_id)
+          end
 
           return parsed
         rescue Faraday::TimeoutError => e

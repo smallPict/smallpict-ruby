@@ -1,6 +1,6 @@
 # SmallPict Ruby SDK
 
-Official Ruby gem for the [SmallPict Image Optimization API](https://smallpict.app) — high-performance next-gen image transcoding (AVIF, WebP), smart compression, Edge CDN delivery, cache purging, and Rails ActiveStorage support.
+Official Ruby gem for the [SmallPict Image Optimization API](https://smallpict.app) — high-performance next-gen image transcoding (AVIF, WebP), smart compression, Edge CDN delivery and cache purging.
 
 [![Gem Version](https://img.shields.io/gem/v/smallpict.svg)](https://rubygems.org/gems/smallpict)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -11,7 +11,6 @@ Official Ruby gem for the [SmallPict Image Optimization API](https://smallpict.a
 ## ⚡ Features
 
 - **💎 Idiomatic Ruby Design:** Block-based configuration (`SmallPict.configure`) and flexible standalone instances.
-- **🚀 Rails ActiveStorage Ready:** Built-in service adapter (`SmallPict::ActiveStorage::Service`).
 - **🛡️ Secure HMAC-SHA256 & Bearer Auth:** Tamper-proof payload verification.
 - **✨ 4 Core Unified Methods:** `optimize()`, `get_quota()`, `purge_cdn()`, and `validate_key()`.
 - **🔄 Resilience & Fault Tolerance:** Automatic `Idempotency-Key` UUID injection, 30s timeouts, and exponential backoff with jitter on HTTP 429/5xx.

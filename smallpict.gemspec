@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["support@smallpict.app"]
 
   spec.summary       = "Official Ruby SDK for SmallPict Image Optimization API"
-  spec.description   = "High-performance next-gen image transcoding (AVIF, WebP), smart compression, Edge CDN delivery, and Rails ActiveStorage integration."
+  spec.description   = "High-performance next-gen image transcoding (AVIF, WebP), smart compression, and Edge CDN delivery."
   spec.homepage      = "https://smallpict.app"
   spec.license       = "MIT"
   spec.required_ruby_version = ">= 3.2.0"

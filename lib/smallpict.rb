@@ -13,7 +13,6 @@ require_relative "smallpict/models/quota_response"
 require_relative "smallpict/models/purge_response"
 require_relative "smallpict/models/job_status_result"
 require_relative "smallpict/client"
-require_relative "smallpict/active_storage/service"
 
 module SmallPict
   class << self

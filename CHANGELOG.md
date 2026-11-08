@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `optimize(bytes)` no longer raises `ArgumentError: path name contains null byte` for real image data. A String source was probed with `File.exist?`, which refuses the NUL bytes every PNG and JPEG header contains, so `SmallPict.optimize(File.binread("x.png"))` crashed before any request. A String is now sent as bytes unless it is NUL-free and names an existing file; a `Pathname` is read from disk and its basename becomes `filename`.
 
+### Removed
+- `SmallPict::ActiveStorage::Service`. It was not an `ActiveStorage::Service` (no `upload`, `download`, `delete`, `exist?`, `url`; not configurable from `config/storage.yml`), and its `url_for` sent an empty body that the API rejects with 400, so it always raised. Use `SmallPict.optimize` on the bytes you hold.
+
 ### Changed
 - Release workflow runs `bundle exec rspec` before `gem build`, passes the RubyGems key through `GEM_HOST_API_KEY` instead of writing `~/.gem/credentials`, restricts the token to `contents: read`, and pins actions to commit SHAs.
 
@@ -57,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Official Ruby SDK implementation for SmallPict OpenAPI 3.1.0 API.
 - Block-based global configuration (`SmallPict.configure { |c| ... }`) and standalone client instances (`SmallPict::Client.new`).
-- Rails ActiveStorage Service adapter (`SmallPict::ActiveStorage::Service`).
+- Rails ActiveStorage Service adapter (`SmallPict::ActiveStorage::Service`). Removed in the next release: it was not an ActiveStorage service.
 - 4 unified core client methods: `optimize`, `get_quota`, `purge_cdn`, and `validate_key`.
 - Helper `get_job_status` for polling asynchronous image conversion tasks.
 - Faraday connection pooling with automatic retry and jitter on HTTP 429/5xx.

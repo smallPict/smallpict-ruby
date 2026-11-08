@@ -415,3 +415,21 @@ RSpec.describe SmallPict::Client, "secret key" do
       .to raise_error(SmallPict::ValidationError, /secret key/)
   end
 end
+
+RSpec.describe SmallPict::Client, "Retry-After cap" do
+  let(:base_url) { "https://api.smallpict.app" }
+  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, max_retries: 1) }
+
+  it "waits at most 30 seconds whatever Retry-After says" do
+    stub_request(:post, "#{base_url}/v1/purge")
+      .to_return({ status: 503, headers: { "Retry-After" => "3600" }, body: JSON.generate({ error: { message: "busy" } }) },
+                 { status: 202, body: JSON.generate({ message: "Purge accepted" }) })
+    delays = []
+    allow(client).to receive(:sleep) { |s| delays << s }
+
+    client.purge_cdn(purge_type: "all")
+
+    expect(WebMock).to have_requested(:post, "#{base_url}/v1/purge").twice
+    expect(delays.max).to be <= 30.2
+  end
+end

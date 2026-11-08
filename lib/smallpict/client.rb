@@ -6,6 +6,9 @@ require "securerandom"
 
 module SmallPict
   class Client
+    # Longest wait a Retry-After header may impose; the hourly purge limit would otherwise block a thread for an hour.
+    MAX_RETRY_AFTER = 30
+
     attr_reader :api_key, :secret_key, :base_url, :timeout, :max_retries, :fallback_mode,
                 :poll_interval, :wait_timeout
 
@@ -226,7 +229,7 @@ module SmallPict
           if (status == 429 && !hourly_purge_limit?(response.body)) || (status >= 500 && status <= 504)
             if attempt <= @max_retries
               delay = base_delay * (2**(attempt - 1))
-              delay = retry_after if retry_after && retry_after.positive?
+              delay = [retry_after, MAX_RETRY_AFTER].min if retry_after && retry_after.positive?
               jitter = rand(0..100) / 1000.0
               sleep(delay + jitter)
               next

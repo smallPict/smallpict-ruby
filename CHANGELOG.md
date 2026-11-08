@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Release workflow runs `bundle exec rspec` before `gem build`, passes the RubyGems key through `GEM_HOST_API_KEY` instead of writing `~/.gem/credentials`, restricts the token to `contents: read`, and pins actions to commit SHAs.
+
 ## [0.1.0] - 2026-11-05
 
 ### Fixed

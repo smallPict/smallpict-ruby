@@ -7,15 +7,19 @@ on:
       - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   publish:
     name: 📦 Publish to RubyGems
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1.338.0
         with:
           ruby-version: "3.2"
+          bundler-cache: true
       - name: Sync version dynamically from git tag
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -26,12 +30,11 @@ jobs:
           echo "Setting dynamic release version to: $VERSION"
           sed -i "s/VERSION = \".*\"/VERSION = \"$VERSION\"/" lib/smallpict/version.rb
           grep -q "VERSION = \"$VERSION\"" lib/smallpict/version.rb
+      - name: Run specs
+        run: bundle exec rspec
       - name: Build & Push Gem
         env:
-          RUBYGEMS_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+          GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
         run: |
-          mkdir -p ~/.gem
-          printf -- "---\n:rubygems_api_key: %s\n" "${RUBYGEMS_API_KEY}" > ~/.gem/credentials
-          chmod 0600 ~/.gem/credentials
           gem build smallpict.gemspec
           gem push smallpict-*.gem

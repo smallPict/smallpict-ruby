@@ -6,14 +6,14 @@ RSpec.describe "SmallPict Models" do
   describe SmallPict::Models::OptimizeOptions do
     it "constructs valid options hash" do
       opts = described_class.new(
-        format: "avif",
-        quality: 85,
-        max_width: 1920,
-        max_height: 1080,
-        max_dimension: 1600,
-        mode: SmallPict::Mode::EXTREME,
-        strip_metadata: true,
-        filename: "hero.png",
+        format:          "avif",
+        quality:         85,
+        max_width:       1920,
+        max_height:      1080,
+        max_dimension:   1600,
+        mode:            SmallPict::Mode::EXTREME,
+        strip_metadata:  true,
+        filename:        "hero.png",
         idempotency_key: "idemp_123"
       )
 
@@ -33,11 +33,11 @@ RSpec.describe "SmallPict Models" do
   describe SmallPict::Models::OptimizeResult do
     it "calculates savings metrics correctly" do
       res = described_class.new(
-        job_id: "job_123",
-        status: "completed",
-        url: "https://cdn.smallpict.app/opt/hero.avif",
-        format: "avif",
-        original_size: 100_000,
+        job_id:          "job_123",
+        status:          "completed",
+        url:             "https://cdn.smallpict.app/opt/hero.avif",
+        format:          "avif",
+        original_size:   100_000,
         compressed_size: 15_000
       )
 
@@ -50,9 +50,9 @@ RSpec.describe "SmallPict Models" do
   describe SmallPict::Models::QuotaResponse do
     it "parses quota attributes" do
       quota = described_class.new(
-        plan: "api_velocity",
-        bytes_used: 5_000_000,
-        quota_limit: 10_000_000,
+        plan:              "api_velocity",
+        bytes_used:        5_000_000,
+        quota_limit:       10_000_000,
         active_keys_count: 3
       )
 

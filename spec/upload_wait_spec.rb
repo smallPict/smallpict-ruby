@@ -38,8 +38,7 @@ RSpec.describe SmallPict::Client, "#optimize upload and wait" do
       req.body.b == bytes &&
         req.headers["Content-Type"] == "image/jpeg" &&
         req.headers["Content-Length"] == bytes.bytesize.to_s &&
-        (req.headers.keys.map(&:downcase) &
-          %w[x-api-key x-timestamp x-signature authorization idempotency-key]).empty?
+        !req.headers.keys.map(&:downcase).intersect?(%w[x-api-key x-timestamp x-signature authorization idempotency-key])
     end)
     expect(WebMock).to have_requested(:get, status_url).twice
     expect(result.job_id).to eq("job_w")

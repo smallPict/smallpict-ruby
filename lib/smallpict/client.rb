@@ -10,6 +10,17 @@ module SmallPict
     # Longest wait a Retry-After header may impose; the hourly purge limit would otherwise block a thread for an hour.
     MAX_RETRY_AFTER = 30
 
+    MAGIC_MIMES = {
+      "\x89PNG".b      => "image/png",
+      "\xFF\xD8\xFF".b => "image/jpeg",
+      "GIF8".b         => "image/gif"
+    }.freeze
+
+    EXTENSION_MIMES = {
+      ".png" => "image/png", ".jpg" => "image/jpeg", ".jpeg" => "image/jpeg", ".gif" => "image/gif",
+      ".webp" => "image/webp", ".avif" => "image/avif", ".svg" => "image/svg+xml"
+    }.freeze
+
     attr_reader :api_key, :secret_key, :base_url, :timeout, :max_retries, :fallback_mode,
                 :poll_interval, :wait_timeout
 
@@ -47,31 +58,29 @@ module SmallPict
       resolved = resolve_source(source, opts)
 
       payload = {
-        filename:     resolved[:filename],
-        mime_type:    resolved[:mime_type],
-        filesize:     resolved[:filesize],
-        options:      opts.to_h
+        filename:  resolved[:filename],
+        mime_type: resolved[:mime_type],
+        filesize:  resolved[:filesize],
+        options:   opts.to_h
       }
 
       begin
         queued = request(:post, "/v1/optimize", payload, idempotency_key: opts.idempotency_key)
       rescue QuotaExceededError => e
-        if @fallback_mode == :passthrough
-          format_str = resolved[:mime_type].to_s.sub("image/", "")
-          return Models::OptimizeResult.new(
-            job_id:             "fallback-passthrough",
-            status:             "completed",
-            url:                "",
-            format:             format_str,
-            original_size:      resolved[:filesize],
-            compressed_size:    resolved[:filesize],
-            bytes_saved:        0,
-            savings_percentage: 0.0,
-            data:               resolved[:bytes]
-          )
-        else
-          raise e
-        end
+        raise e unless @fallback_mode == :passthrough
+
+        format_str = resolved[:mime_type].to_s.sub("image/", "")
+        return Models::OptimizeResult.new(
+          job_id:             "fallback-passthrough",
+          status:             "completed",
+          url:                "",
+          format:             format_str,
+          original_size:      resolved[:filesize],
+          compressed_size:    resolved[:filesize],
+          bytes_saved:        0,
+          savings_percentage: 0.0,
+          data:               resolved[:bytes]
+        )
       end
 
       unless queued.is_a?(Hash) && queued["upload_url"].is_a?(String) && queued["job_id"].is_a?(String)
@@ -132,7 +141,7 @@ module SmallPict
       return if response.status >= 200 && response.status < 300
 
       text = response.body.to_s
-      message = "Upload to staging failed with HTTP #{response.status}#{text.empty? ? "" : ": #{text}"}"
+      message = "Upload to staging failed with HTTP #{response.status}#{": #{text}" unless text.empty?}"
       raise Error.new(message, code: "upload_failed", status_code: response.status)
     rescue Faraday::TimeoutError => e
       raise TimeoutError, "Upload to staging timed out: #{e.message}"
@@ -143,7 +152,7 @@ module SmallPict
     def wait_for_job(job_id, original_size)
       deadline = monotonic_now + @wait_timeout
       loop do
-        sleep([@poll_interval, [deadline - monotonic_now, 0].max].min)
+        sleep((deadline - monotonic_now).clamp(0, @poll_interval))
         status = get_job_status(job_id)
 
         case status.status
@@ -206,8 +215,8 @@ module SmallPict
           timestamp = Time.now.to_i.to_s
 
           headers = {
-            "Accept"     => "application/json",
-            "X-API-Key"  => @api_key
+            "Accept"    => "application/json",
+            "X-API-Key" => @api_key
           }
           headers["Content-Type"] = "application/json" if body_str
 
@@ -217,9 +226,7 @@ module SmallPict
 
           # The server rejects a repeated signature as a replay unless the nonce differs.
           headers["X-Nonce"] = SecureRandom.uuid
-          if %i[post patch delete].include?(method.to_s.downcase.to_sym)
-            headers["Idempotency-Key"] = idempotency_key
-          end
+          headers["Idempotency-Key"] = idempotency_key if %i[post patch delete].include?(method.to_s.downcase.to_sym)
 
           response = connection.send(method.to_s.downcase.to_sym, url) do |req|
             req.headers = headers
@@ -231,20 +238,15 @@ module SmallPict
           retry_after = response.headers["retry-after"]&.to_i
 
           parsed = parse_body(response.body)
-          if (status == 429 && !hourly_purge_limit?(parsed)) || (status >= 500 && status <= 504)
-            if attempt <= @max_retries
-              delay = base_delay * (2**(attempt - 1))
-              delay = [retry_after, MAX_RETRY_AFTER].min if retry_after && retry_after.positive?
-              jitter = rand(0..100) / 1000.0
-              sleep(delay + jitter)
-              next
-            end
+          if ((status == 429 && !hourly_purge_limit?(parsed)) || status.between?(500, 504)) && (attempt <= @max_retries)
+            delay = base_delay * (2**(attempt - 1))
+            delay = [retry_after, MAX_RETRY_AFTER].min if retry_after&.positive?
+            jitter = rand(0..100) / 1000.0
+            sleep(delay + jitter)
+            next
           end
 
-
-          if status < 200 || status >= 300
-            handle_error_response(status, parsed, request_id, retry_after)
-          end
+          handle_error_response(status, parsed, request_id, retry_after) if status < 200 || status >= 300
           if parsed.key?("raw")
             raise Error.new("Expected a JSON body, got: #{parsed["raw"].to_s[0, 200]}",
                             code: "invalid_response", status_code: status, request_id: request_id)
@@ -263,7 +265,6 @@ module SmallPict
           raise NetworkError, e.message
         end
       end
-
     end
 
     def connection
@@ -312,9 +313,7 @@ module SmallPict
       when 404 then raise NotFoundError.new(message, request_id: request_id, details: details)
       when 429 then raise RateLimitError.new(message, retry_after: retry_after, request_id: request_id, details: details)
       else
-        if status >= 500
-          raise ServerError.new(message, status_code: status, request_id: request_id, details: details)
-        end
+        raise ServerError.new(message, status_code: status, request_id: request_id, details: details) if status >= 500
 
         raise Error.new(message, code: code, status_code: status, request_id: request_id, details: details)
       end
@@ -340,12 +339,11 @@ module SmallPict
         if !source.include?("\0") && File.file?(source)
           filename = File.basename(source) if options.filename.nil?
           bytes = File.binread(source)
-          filesize = bytes.bytesize
         else
           # Raw binary data
           bytes = source
-          filesize = bytes.bytesize
         end
+        filesize = bytes.bytesize
       else
         raise ValidationError, "Unsupported image source: pass an IO, a file path or the image bytes as a String"
       end
@@ -357,17 +355,6 @@ module SmallPict
         bytes:     bytes
       }
     end
-
-    MAGIC_MIMES = {
-      "\x89PNG".b => "image/png",
-      "\xFF\xD8\xFF".b => "image/jpeg",
-      "GIF8".b => "image/gif"
-    }.freeze
-
-    EXTENSION_MIMES = {
-      ".png" => "image/png", ".jpg" => "image/jpeg", ".jpeg" => "image/jpeg", ".gif" => "image/gif",
-      ".webp" => "image/webp", ".avif" => "image/avif", ".svg" => "image/svg+xml"
-    }.freeze
 
     def detect_mime(bytes)
       head = bytes.byteslice(0, 12).to_s.b

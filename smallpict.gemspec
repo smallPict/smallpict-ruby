@@ -17,6 +17,7 @@ Gem::Specification.new do |spec|
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/smallPict/smallpict-ruby"
   spec.metadata["changelog_uri"] = "https://github.com/smallPict/smallpict-ruby/blob/main/CHANGELOG.md"
+  spec.metadata["rubygems_mfa_required"] = "true"
 
   spec.files = Dir["lib/**/*.rb", "README.md", "LICENSE", "SECURITY.md", "CHANGELOG.md"]
   spec.require_paths = ["lib"]
@@ -24,6 +25,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency "faraday", ">= 2.0"
 
   spec.add_development_dependency "rspec", "~> 3.12"
-  spec.add_development_dependency "webmock", "~> 3.18"
   spec.add_development_dependency "rubocop", "~> 1.50"
+  spec.add_development_dependency "webmock", "~> 3.18"
 end

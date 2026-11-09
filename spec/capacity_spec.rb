@@ -10,47 +10,47 @@ RSpec.describe "capacity and upgrade links" do
   let(:client) { SmallPict::Client.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url) }
 
   quota_responses = {
-    "wordpress_with_capacity" => {
+    "wordpress_with_capacity"       => {
       "plan" => "pro", "bytes_used" => 1_048_576,
       "capacity" => {
         "period_end" => "2026-11-30T00:00:00Z",
-        "storage" => { "limit_bytes" => 75_161_927_680, "used_bytes" => 7_516_192_768, "base_bytes" => 53_687_091_200,
+        "storage"    => { "limit_bytes" => 75_161_927_680, "used_bytes" => 7_516_192_768, "base_bytes" => 53_687_091_200,
                        "addon_blocks" => 2 },
-        "cdn" => { "limit_bytes" => 53_687_091_200, "used_bytes" => 44_023_414_784, "status" => "warn_80" },
-        "booster" => {
+        "cdn"        => { "limit_bytes" => 53_687_091_200, "used_bytes" => 44_023_414_784, "status" => "warn_80" },
+        "booster"    => {
           "active" => true, "wp_quota_bytes" => 2_147_483_648, "api_transforms" => nil, "cdn_bytes" => 107_374_182_400,
           "next_expiry" => { "kind" => "cdn_bytes", "units" => 42_949_672_960, "expires_at" => "2027-01-05T00:00:00Z" }
         },
-        "lapse" => nil,
+        "lapse"      => nil,
         "manage_url" => BILLING
       }
     },
-    "api_blocked" => {
+    "api_blocked"                   => {
       "plan" => "velocity", "bytes_used" => 0,
       "capacity" => {
         "period_end" => nil,
-        "storage" => { "limit_bytes" => 107_374_182_400, "used_bytes" => 1_073_741_824,
+        "storage"    => { "limit_bytes" => 107_374_182_400, "used_bytes" => 1_073_741_824,
                        "base_bytes" => 107_374_182_400, "addon_blocks" => 0 },
-        "cdn" => nil,
-        "booster" => { "active" => false, "wp_quota_bytes" => nil, "api_transforms" => 5000, "cdn_bytes" => nil,
+        "cdn"        => nil,
+        "booster"    => { "active" => false, "wp_quota_bytes" => nil, "api_transforms" => 5000, "cdn_bytes" => nil,
                        "next_expiry" => nil },
-        "lapse" => { "stage" => "blocked", "delete_after" => "2027-01-28T00:00:00Z" },
+        "lapse"      => { "stage" => "blocked", "delete_after" => "2027-01-28T00:00:00Z" },
         "manage_url" => BILLING
       }
     },
-    "sandbox" => {
+    "sandbox"                       => {
       "plan" => "sandbox", "bytes_used" => 0,
       "capacity" => {
         "period_end" => nil,
-        "storage" => nil,
-        "cdn" => { "limit_bytes" => 1_073_741_824, "used_bytes" => 0, "status" => "ok" },
-        "booster" => { "active" => false, "wp_quota_bytes" => nil, "api_transforms" => 0, "cdn_bytes" => 0,
+        "storage"    => nil,
+        "cdn"        => { "limit_bytes" => 1_073_741_824, "used_bytes" => 0, "status" => "ok" },
+        "booster"    => { "active" => false, "wp_quota_bytes" => nil, "api_transforms" => 0, "cdn_bytes" => 0,
                        "next_expiry" => nil },
-        "lapse" => nil,
+        "lapse"      => nil,
         "manage_url" => BILLING
       }
     },
-    "capacity_unreadable" => { "plan" => "pro", "bytes_used" => 0, "capacity" => nil },
+    "capacity_unreadable"           => { "plan" => "pro", "bytes_used" => 0, "capacity" => nil },
     "older_server_without_capacity" => { "plan" => "pro", "bytes_used" => 0 }
   }
 
@@ -163,7 +163,7 @@ RSpec.describe "capacity and upgrade links" do
 
   it "does not retry or fetch upgrade_url" do
     stub_request(:get, "#{base_url}/v1/quota").to_return(
-      status: 402, body: JSON.generate(error: { code: "QUOTA_EXCEEDED",
+      status: 402, body: JSON.generate(error: { code:    "QUOTA_EXCEEDED",
                                                 details: { upgrade_url: "#{base_url}/upgrade" } })
     )
     expect { client.get_quota }.to raise_error(SmallPict::QuotaExceededError)

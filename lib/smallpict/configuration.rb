@@ -6,8 +6,8 @@ module SmallPict
                   :poll_interval, :wait_timeout
 
     def initialize
-      @api_key       = ENV["SMALLPICT_API_KEY"]
-      @secret_key    = ENV["SMALLPICT_SECRET_KEY"]
+      @api_key       = ENV.fetch("SMALLPICT_API_KEY", nil)
+      @secret_key    = ENV.fetch("SMALLPICT_SECRET_KEY", nil)
       @base_url      = (ENV["SMALLPICT_BASE_URL"] || "https://api.smallpict.app").chomp("/")
       @timeout       = 30
       @max_retries   = 3

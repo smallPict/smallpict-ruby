@@ -9,7 +9,7 @@ RSpec.describe SmallPict::Client do
   let(:client) { described_class.new(api_key: api_key, secret_key: secret_key, base_url: base_url, poll_interval: 0.001) }
   let(:upload_url) { "https://staging.s3.amazonaws.com/in/upload?X-Amz-Signature=abc" }
 
-  # optimize queues the job, PUTs the bytes to upload_url, then polls the status (SDK_SPEC.md 3d).
+  # OPTIMIZE: queues the job, PUTs the bytes to upload_url, then polls the status (SDK_SPEC.md 3d).
   def queued_body(job_id)
     JSON.generate({ job_id: job_id, status: "queued", upload_url: upload_url, object_key: "in/upload", bucket: "staging" })
   end
@@ -33,9 +33,9 @@ RSpec.describe SmallPict::Client do
       stub_request(:post, "#{base_url}/v1/optimize")
         .with(
           headers: {
-            "Accept"          => "application/json",
-            "Content-Type"    => "application/json",
-            "X-Api-Key"       => api_key
+            "Accept"       => "application/json",
+            "Content-Type" => "application/json",
+            "X-Api-Key"    => api_key
           }
         )
         .to_return(status: 202, headers: { "Content-Type" => "application/json" }, body: queued_body("job_rb_123"))
@@ -55,11 +55,11 @@ RSpec.describe SmallPict::Client do
     it "handles fallback passthrough on 402 quota exceeded" do
       stub_request(:post, "#{base_url}/v1/optimize")
         .to_return(
-          status: 402,
+          status:  402,
           headers: { "Content-Type" => "application/json" },
-          body: JSON.generate({
-            error: { code: "QUOTA_EXCEEDED", message: "Monthly quota full" }
-          })
+          body:    JSON.generate({
+                                   error: { code: "QUOTA_EXCEEDED", message: "Monthly quota full" }
+                                 })
         )
 
       passthrough_client = described_class.new(
@@ -131,15 +131,15 @@ RSpec.describe SmallPict::Client do
     it "raises PermissionDeniedError with details on 403 mode_not_in_plan" do
       stub_request(:post, "#{base_url}/v1/optimize")
         .to_return(
-          status: 403,
+          status:  403,
           headers: { "Content-Type" => "application/json" },
-          body: JSON.generate({
-            error: {
-              code: "mode_not_in_plan",
-              message: "Mode lossless is not included in your plan",
-              details: { mode: "lossless", allowed_modes: %w[lossy extreme] }
-            }
-          })
+          body:    JSON.generate({
+                                   error: {
+                                     code:    "mode_not_in_plan",
+                                     message: "Mode lossless is not included in your plan",
+                                     details: { mode: "lossless", allowed_modes: %w[lossy extreme] }
+                                   }
+                                 })
         )
 
       expect { client.optimize("img", mode: "lossless") }.to raise_error(SmallPict::PermissionDeniedError) { |e|
@@ -253,14 +253,14 @@ RSpec.describe SmallPict::Client do
     it "retrieves quota metrics" do
       stub_request(:get, "#{base_url}/v1/quota")
         .to_return(
-          status: 200,
+          status:  200,
           headers: { "Content-Type" => "application/json" },
-          body: JSON.generate({
-            plan:             "api_velocity",
-            bytes_used:       2_500_000,
-            quota_limit:      10_000_000,
-            quota_percentage: 25.0
-          })
+          body:    JSON.generate({
+                                   plan:             "api_velocity",
+                                   bytes_used:       2_500_000,
+                                   quota_limit:      10_000_000,
+                                   quota_percentage: 25.0
+                                 })
         )
 
       quota = client.get_quota
@@ -274,9 +274,9 @@ RSpec.describe SmallPict::Client do
     it "enqueues CDN cache invalidation" do
       stub_request(:post, "#{base_url}/v1/purge")
         .to_return(
-          status: 202,
+          status:  202,
           headers: { "Content-Type" => "application/json" },
-          body: JSON.generate({ message: "Purge accepted" })
+          body:    JSON.generate({ message: "Purge accepted" })
         )
 
       res = client.purge_cdn(["https://cdn.smallpict.app/opt/photo.avif"])
@@ -348,15 +348,17 @@ end
 
 RSpec.describe SmallPict::Client, "source handling" do
   let(:base_url) { "https://api.smallpict.app" }
-  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, poll_interval: 0.001) }
+  let(:client) do
+    described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, poll_interval: 0.001)
+  end
   let(:upload_url) { "https://staging.s3.amazonaws.com/in/upload?X-Amz-Signature=abc" }
   let(:png_bytes) { "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR".b }
 
   def stub_flow
     posts = []
     stub_request(:post, "#{base_url}/v1/optimize").with { |req| posts << JSON.parse(req.body) }
-      .to_return(status: 202, headers: { "Content-Type" => "application/json" },
-                 body: JSON.generate({ job_id: "j1", status: "queued", upload_url: upload_url, object_key: "k", bucket: "b" }))
+                                                  .to_return(status: 202, headers: { "Content-Type" => "application/json" },
+                                                             body: JSON.generate({ job_id: "j1", status: "queued", upload_url: upload_url, object_key: "k", bucket: "b" }))
     stub_request(:put, upload_url).to_return(status: 200)
     stub_request(:get, "#{base_url}/v1/optimize/status?job_id=j1")
       .to_return(status: 200, headers: { "Content-Type" => "application/json" },
@@ -389,13 +391,17 @@ end
 
 RSpec.describe SmallPict::Client, "retry headers" do
   let(:base_url) { "https://api.smallpict.app" }
-  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, max_retries: 1) }
+  let(:client) do
+    described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, max_retries: 1)
+  end
 
   it "sends a new X-Nonce and the same Idempotency-Key on a retry" do
     seen = []
     stub_request(:post, "#{base_url}/v1/purge").with { |req| seen << req.headers }
-      .to_return({ status: 503, body: JSON.generate({ error: { code: "INTERNAL_ERROR", message: "try again" } }) },
-                 { status: 202, body: JSON.generate({ message: "Purge accepted" }) })
+                                               .to_return({ status: 503,
+                                                            body:   JSON.generate({ error: { code:    "INTERNAL_ERROR",
+                                                                                             message: "try again" } }) },
+                                                          { status: 202, body: JSON.generate({ message: "Purge accepted" }) })
     allow(client).to receive(:sleep)
 
     client.purge_cdn(purge_type: "all")
@@ -418,7 +424,9 @@ end
 
 RSpec.describe SmallPict::Client, "Retry-After cap" do
   let(:base_url) { "https://api.smallpict.app" }
-  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, max_retries: 1) }
+  let(:client) do
+    described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, max_retries: 1)
+  end
 
   it "waits at most 30 seconds whatever Retry-After says" do
     stub_request(:post, "#{base_url}/v1/purge")
@@ -436,15 +444,17 @@ end
 
 RSpec.describe SmallPict::Client, "mime detection" do
   let(:base_url) { "https://api.smallpict.app" }
-  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, poll_interval: 0.001) }
+  let(:client) do
+    described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, poll_interval: 0.001)
+  end
   let(:upload_url) { "https://staging.s3.amazonaws.com/in/upload?X-Amz-Signature=abc" }
 
   def optimize_and_record(source, **opts)
     posts = []
     puts_seen = []
     stub_request(:post, "#{base_url}/v1/optimize").with { |req| posts << JSON.parse(req.body) }
-      .to_return(status: 202, headers: { "Content-Type" => "application/json" },
-                 body: JSON.generate({ job_id: "j1", status: "queued", upload_url: upload_url, object_key: "k", bucket: "b" }))
+                                                  .to_return(status: 202, headers: { "Content-Type" => "application/json" },
+                                                             body: JSON.generate({ job_id: "j1", status: "queued", upload_url: upload_url, object_key: "k", bucket: "b" }))
     stub_request(:put, upload_url).with { |req| puts_seen << req.headers["Content-Type"] }.to_return(status: 200)
     stub_request(:get, "#{base_url}/v1/optimize/status?job_id=j1")
       .to_return(status: 200, headers: { "Content-Type" => "application/json" },
@@ -510,8 +520,8 @@ RSpec.describe SmallPict::Client, "signing and mapping" do
     posts = []
     upload_url = "https://staging.s3.amazonaws.com/in/upload?X-Amz-Signature=abc"
     stub_request(:post, "#{base_url}/v1/optimize").with { |req| posts << JSON.parse(req.body) }
-      .to_return(status: 202, headers: { "Content-Type" => "application/json" },
-                 body: JSON.generate({ job_id: "j1", status: "queued", upload_url: upload_url, object_key: "k", bucket: "b" }))
+                                                  .to_return(status: 202, headers: { "Content-Type" => "application/json" },
+                                                             body: JSON.generate({ job_id: "j1", status: "queued", upload_url: upload_url, object_key: "k", bucket: "b" }))
     stub_request(:put, upload_url).to_return(status: 200)
     stub_request(:get, "#{base_url}/v1/optimize/status?job_id=j1")
       .to_return(status: 200, body: JSON.generate({ job_id: "j1", status: "completed", url: "u", format: "webp", bytes_saved: 1 }))
@@ -559,7 +569,9 @@ end
 
 RSpec.describe SmallPict::Client, "transport errors" do
   let(:base_url) { "https://api.smallpict.app" }
-  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, max_retries: 0) }
+  let(:client) do
+    described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, max_retries: 0)
+  end
 
   it "wraps every Faraday error in NetworkError" do
     stub_request(:get, "#{base_url}/v1/quota").to_raise(Faraday::SSLError.new("certificate verify failed"))
@@ -577,7 +589,9 @@ end
 
 RSpec.describe SmallPict::Client, "incomplete optimize response" do
   let(:base_url) { "https://api.smallpict.app" }
-  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, poll_interval: 0.001) }
+  let(:client) do
+    described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, poll_interval: 0.001)
+  end
 
   it "raises invalid_response when the queued answer has no upload_url" do
     stub_request(:post, "#{base_url}/v1/optimize")
@@ -589,14 +603,16 @@ end
 
 RSpec.describe SmallPict::Client, "payload fields" do
   let(:base_url) { "https://api.smallpict.app" }
-  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, poll_interval: 0.001) }
+  let(:client) do
+    described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, poll_interval: 0.001)
+  end
   let(:upload_url) { "https://staging.s3.amazonaws.com/in/upload?X-Amz-Signature=abc" }
 
   it "sends only fields the API reads, with content_type accepted as an alias" do
     posts = []
     stub_request(:post, "#{base_url}/v1/optimize").with { |req| posts << JSON.parse(req.body) }
-      .to_return(status: 202, headers: { "Content-Type" => "application/json" },
-                 body: JSON.generate({ job_id: "j1", status: "queued", upload_url: upload_url, object_key: "k", bucket: "b" }))
+                                                  .to_return(status: 202, headers: { "Content-Type" => "application/json" },
+                                                             body: JSON.generate({ job_id: "j1", status: "queued", upload_url: upload_url, object_key: "k", bucket: "b" }))
     stub_request(:put, upload_url).to_return(status: 200)
     stub_request(:get, "#{base_url}/v1/optimize/status?job_id=j1")
       .to_return(status: 200, body: JSON.generate({ job_id: "j1", status: "completed", url: "u", format: "webp", bytes_saved: 1 }))

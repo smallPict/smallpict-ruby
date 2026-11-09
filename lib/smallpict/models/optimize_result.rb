@@ -15,7 +15,8 @@ module SmallPict
         @original_size      = (attributes[:original_size] || attributes["original_size"] || 0).to_i
         @compressed_size    = (attributes[:compressed_size] || attributes["compressed_size"] || @original_size).to_i
         @bytes_saved        = (attributes[:bytes_saved] || attributes["bytes_saved"] || [@original_size - @compressed_size, 0].max).to_i
-        @savings_percentage = (attributes[:savings_percentage] || attributes["savings_percentage"] || calculate_savings_percentage).to_f.round(2)
+        @savings_percentage = (attributes[:savings_percentage] || attributes["savings_percentage"] ||
+                               calculate_savings_percentage).to_f.round(2)
         @data               = attributes[:data]
         # Normalized (lower case) by the server; nil without a folder.
         @folder             = attributes[:folder] || attributes["folder"]

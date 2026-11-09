@@ -17,3 +17,40 @@ Metrics/CyclomaticComplexity:
 
 Metrics/PerceivedComplexity:
   Max: 15
+
+# The code base uses double quotes and table-aligned hashes throughout.
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+
+Layout/HashAlignment:
+  EnforcedColonStyle: table
+  EnforcedHashRocketStyle: table
+
+Layout/LineLength:
+  Max: 140
+  Exclude:
+    - "spec/**/*"
+
+# RSpec example groups are long by nature.
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
+
+# Development dependencies live in the gemspec on purpose; the Gemfile only pins parallel.
+Gemspec/DevelopmentDependencies:
+  Enabled: false
+
+# Size and complexity metrics measure; they do not find bugs. The client's request loop and the
+# options object are long because the API contract is, not because they mix jobs.
+Metrics:
+  Enabled: false
+
+# get_quota, get_job_status and SmallPict.client are the public API named in the contract.
+Naming/AccessorMethodName:
+  Enabled: false
+Naming/MemoizedInstanceVariableName:
+  Enabled: false
+

@@ -22,19 +22,19 @@ module SmallPict
         l  = get(data, :lapse)
         new(
           period_end: get(data, :period_end),
-          storage: s && CapacityStorage.new(limit_bytes: get(s, :limit_bytes), used_bytes: get(s, :used_bytes),
-                                            base_bytes: get(s, :base_bytes), addon_blocks: get(s, :addon_blocks)),
-          cdn: cd && CapacityCdn.new(limit_bytes: get(cd, :limit_bytes), used_bytes: get(cd, :used_bytes),
-                                     status: get(cd, :status)),
-          booster: CapacityBooster.new(
-            active: get(b, :active) == true,
+          storage:    s && CapacityStorage.new(limit_bytes: get(s, :limit_bytes), used_bytes: get(s, :used_bytes),
+                                               base_bytes: get(s, :base_bytes), addon_blocks: get(s, :addon_blocks)),
+          cdn:        cd && CapacityCdn.new(limit_bytes: get(cd, :limit_bytes), used_bytes: get(cd, :used_bytes),
+                                            status: get(cd, :status)),
+          booster:    CapacityBooster.new(
+            active:         get(b, :active) == true,
             wp_quota_bytes: get(b, :wp_quota_bytes),
             api_transforms: get(b, :api_transforms),
-            cdn_bytes: get(b, :cdn_bytes),
-            next_expiry: e && CapacityExpiry.new(kind: get(e, :kind), units: get(e, :units),
-                                                 expires_at: get(e, :expires_at))
+            cdn_bytes:      get(b, :cdn_bytes),
+            next_expiry:    e && CapacityExpiry.new(kind: get(e, :kind), units: get(e, :units),
+                                                    expires_at: get(e, :expires_at))
           ),
-          lapse: l && CapacityLapse.new(stage: get(l, :stage), delete_after: get(l, :delete_after)),
+          lapse:      l && CapacityLapse.new(stage: get(l, :stage), delete_after: get(l, :delete_after)),
           manage_url: get(data, :manage_url)
         )
       end

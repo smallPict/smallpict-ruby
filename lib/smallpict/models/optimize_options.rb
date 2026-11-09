@@ -41,13 +41,13 @@ module SmallPict
 
       def to_h
         {
-          format: @format,
-          quality: @quality,
-          max_width: @max_width,
-          max_height: @max_height,
-          max_dimension: @max_dimension,
-          mode: @mode,
-          folder: @folder,
+          format:         @format,
+          quality:        @quality,
+          max_width:      @max_width,
+          max_height:     @max_height,
+          max_dimension:  @max_dimension,
+          mode:           @mode,
+          folder:         @folder,
           strip_metadata: @strip_metadata
         }.compact
       end

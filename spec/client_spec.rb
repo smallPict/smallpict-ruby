@@ -586,3 +586,25 @@ RSpec.describe SmallPict::Client, "incomplete optimize response" do
     expect(WebMock).not_to have_requested(:put, /.*/)
   end
 end
+
+RSpec.describe SmallPict::Client, "payload fields" do
+  let(:base_url) { "https://api.smallpict.app" }
+  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, poll_interval: 0.001) }
+  let(:upload_url) { "https://staging.s3.amazonaws.com/in/upload?X-Amz-Signature=abc" }
+
+  it "sends only fields the API reads, with content_type accepted as an alias" do
+    posts = []
+    stub_request(:post, "#{base_url}/v1/optimize").with { |req| posts << JSON.parse(req.body) }
+      .to_return(status: 202, headers: { "Content-Type" => "application/json" },
+                 body: JSON.generate({ job_id: "j1", status: "queued", upload_url: upload_url, object_key: "k", bucket: "b" }))
+    stub_request(:put, upload_url).to_return(status: 200)
+    stub_request(:get, "#{base_url}/v1/optimize/status?job_id=j1")
+      .to_return(status: 200, body: JSON.generate({ job_id: "j1", status: "completed", url: "u", format: "webp", bytes_saved: 1 }))
+
+    client.optimize("img".b, content_type: "image/webp")
+
+    expect(posts.first).not_to have_key("content_type")
+    expect(posts.first["options"]).not_to have_key("fit")
+    expect(posts.first["mime_type"]).to eq("image/webp")
+  end
+end

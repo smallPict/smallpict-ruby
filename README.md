@@ -182,7 +182,7 @@ bundle exec rubocop
 
 ## 🔒 Security & Schema Compatibility (2026)
 
-- **`mime_type` & `content_type` Dual Support**: `OptimizeOptions` accepts both `mime_type` and `content_type` keyword arguments. Outgoing optimization payloads include both `mime_type` and `content_type` fields, ensuring seamless zero-disruption compatibility across all SmallPict API versions.
+- **`content_type` alias**: `OptimizeOptions` still accepts `content_type:` as an alias of `mime_type:` for older callers; only `mime_type` is sent, which is the field the API reads.
 
 ---
 

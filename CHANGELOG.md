@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `optimize(bytes)` no longer raises `ArgumentError: path name contains null byte` for real image data. A String source was probed with `File.exist?`, which refuses the NUL bytes every PNG and JPEG header contains, so `SmallPict.optimize(File.binread("x.png"))` crashed before any request. A String is now sent as bytes unless it is NUL-free and names an existing file; a `Pathname` is read from disk and its basename becomes `filename`.
 
 ### Removed
+- The `fit:` option (always sent as `"cover"`, not a server field, so it never did anything) and the `content_type` field of the request body (a duplicate of `mime_type`). `content_type:` is still accepted as an alias of `mime_type:`. The `faraday-retry` runtime dependency, which was never required (retries are implemented in the client), is gone from the gemspec.
 - `SmallPict::ActiveStorage::Service`. It was not an `ActiveStorage::Service` (no `upload`, `download`, `delete`, `exist?`, `url`; not configurable from `config/storage.yml`), and its `url_for` sent an empty body that the API rejects with 400, so it always raised. Use `SmallPict.optimize` on the bytes you hold.
 
 ### Changed

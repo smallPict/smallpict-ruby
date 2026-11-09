@@ -3,8 +3,8 @@
 module SmallPict
   module Models
     class OptimizeOptions
-      attr_reader :format, :quality, :max_width, :max_height, :max_dimension, :fit,
-                  :mode, :lossless, :folder, :strip_metadata, :filename, :mime_type, :content_type, :idempotency_key
+      attr_reader :format, :quality, :max_width, :max_height, :max_dimension,
+                  :mode, :lossless, :folder, :strip_metadata, :filename, :mime_type, :idempotency_key
 
       # mode:     SmallPict::Mode::LOSSY (server default when omitted), EXTREME or LOSSLESS.
       # quality:  optional 1-100; omitted when nil so the server picks the default per mode.
@@ -16,7 +16,6 @@ module SmallPict
         max_width: nil,
         max_height: nil,
         max_dimension: nil,
-        fit: "cover",
         mode: nil,
         lossless: nil,
         folder: nil,
@@ -31,14 +30,12 @@ module SmallPict
         @max_width       = max_width
         @max_height      = max_height
         @max_dimension   = max_dimension
-        @fit             = fit.to_s
         @lossless        = lossless
         @mode            = resolve_mode(mode, lossless)
         @folder          = folder.nil? ? nil : Folder.validate!(folder)
         @strip_metadata  = strip_metadata
         @filename        = filename
         @mime_type       = mime_type || content_type
-        @content_type    = content_type || mime_type
         @idempotency_key = idempotency_key
       end
 
@@ -49,7 +46,6 @@ module SmallPict
           max_width: @max_width,
           max_height: @max_height,
           max_dimension: @max_dimension,
-          fit: @fit,
           mode: @mode,
           folder: @folder,
           strip_metadata: @strip_metadata

@@ -49,7 +49,6 @@ module SmallPict
       payload = {
         filename:     resolved[:filename],
         mime_type:    resolved[:mime_type],
-        content_type: resolved[:mime_type],
         filesize:     resolved[:filesize],
         options:      opts.to_h
       }
@@ -231,7 +230,8 @@ module SmallPict
           request_id = response.headers["x-request-id"]
           retry_after = response.headers["retry-after"]&.to_i
 
-          if (status == 429 && !hourly_purge_limit?(response.body)) || (status >= 500 && status <= 504)
+          parsed = parse_body(response.body)
+          if (status == 429 && !hourly_purge_limit?(parsed)) || (status >= 500 && status <= 504)
             if attempt <= @max_retries
               delay = base_delay * (2**(attempt - 1))
               delay = [retry_after, MAX_RETRY_AFTER].min if retry_after && retry_after.positive?
@@ -241,7 +241,6 @@ module SmallPict
             end
           end
 
-          parsed = parse_body(response.body)
 
           if status < 200 || status >= 300
             handle_error_response(status, parsed, request_id, retry_after)
@@ -265,7 +264,6 @@ module SmallPict
         end
       end
 
-      raise TimeoutError, "Request failed after maximum retry attempts"
     end
 
     def connection
@@ -277,8 +275,7 @@ module SmallPict
     end
 
     # 429 purge_rate_limited is an hourly limit: retrying within seconds cannot succeed.
-    def hourly_purge_limit?(body_str)
-      body = parse_body(body_str)
+    def hourly_purge_limit?(body)
       body.is_a?(Hash) && body["error"].is_a?(Hash) && body["error"]["code"] == "purge_rate_limited"
     end
 
@@ -325,7 +322,7 @@ module SmallPict
 
     def resolve_source(source, options)
       filename = options.filename || "image.jpg"
-      explicit_mime = options.mime_type || (options.respond_to?(:content_type) ? options.content_type : nil)
+      explicit_mime = options.mime_type
       filesize = 0
       bytes = nil
 

@@ -75,6 +75,10 @@ module SmallPict
         end
       end
 
+      unless queued.is_a?(Hash) && queued["upload_url"].is_a?(String) && queued["job_id"].is_a?(String)
+        raise Error.new("optimize response has no upload_url or job_id", code: "invalid_response", status_code: 200)
+      end
+
       # The worker waits 30 s from the request for the object: upload now, poll after.
       upload(queued["upload_url"], resolved[:bytes], resolved[:mime_type])
       wait_for_job(queued["job_id"], resolved[:filesize])

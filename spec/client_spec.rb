@@ -574,3 +574,15 @@ RSpec.describe SmallPict::Client, "transport errors" do
     expect(client.validate_key).to be false
   end
 end
+
+RSpec.describe SmallPict::Client, "incomplete optimize response" do
+  let(:base_url) { "https://api.smallpict.app" }
+  let(:client) { described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123", base_url: base_url, poll_interval: 0.001) }
+
+  it "raises invalid_response when the queued answer has no upload_url" do
+    stub_request(:post, "#{base_url}/v1/optimize")
+      .to_return(status: 202, headers: { "Content-Type" => "application/json" }, body: JSON.generate({ job_id: "j1", status: "queued" }))
+    expect { client.optimize("img".b) }.to raise_error(SmallPict::Error) { |e| expect(e.code).to eq("invalid_response") }
+    expect(WebMock).not_to have_requested(:put, /.*/)
+  end
+end

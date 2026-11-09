@@ -43,7 +43,8 @@ module SmallPict
 
       @api_key       = api_key || config.api_key
       @secret_key    = secret_key || config.secret_key
-      @base_url      = (base_url || config.base_url).chomp("/")
+      # The client adds /v1 itself; SDK_SPEC names the base URL with it, so accept both forms.
+      @base_url      = (base_url || config.base_url).chomp("/").sub(%r{/v1\z}, "")
       @timeout       = (timeout || config.timeout).to_i
       @max_retries   = (max_retries || config.max_retries).to_i
       @fallback_mode = (fallback_mode || config.fallback_mode).to_sym

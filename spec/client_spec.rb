@@ -624,3 +624,14 @@ RSpec.describe SmallPict::Client, "payload fields" do
     expect(posts.first["mime_type"]).to eq("image/webp")
   end
 end
+
+RSpec.describe SmallPict::Client, "base_url" do
+  it "accepts a base_url that already ends in /v1" do
+    client = described_class.new(api_key: "sp_sdk_test_1234567890", secret_key: "sec_test_secret_123",
+                                 base_url: "https://api.smallpict.app/v1")
+    stub_request(:get, "https://api.smallpict.app/v1/quota")
+      .to_return(status: 200, body: JSON.generate({ plan: "free", bytes_used: 0, quota_limit: 1, quota_percentage: 0.0 }))
+
+    expect(client.get_quota.plan).to eq("free")
+  end
+end

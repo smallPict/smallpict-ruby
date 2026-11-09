@@ -14,7 +14,7 @@ Official Ruby gem for the [SmallPict Image Optimization API](https://smallpict.a
 - **🛡️ HMAC-SHA256 request signing:** every request is signed with your secret key; both `api_key` and `secret_key` are required.
 - **✨ 4 Core Unified Methods:** `optimize()`, `get_quota()`, `purge_cdn()`, and `validate_key()`.
 - **🔄 Resilience & Fault Tolerance:** Automatic `Idempotency-Key` UUID injection, 30s timeouts, and exponential backoff with jitter on HTTP 429/5xx.
-- **🔒 Zero-Leak Privacy:** API keys and credentials are automatically redacted from `to_s` and `inspect` error logs.
+- **🔒 Zero-Leak Privacy:** API keys and secrets are redacted from error messages, and `Client#inspect` / `Configuration#inspect` show only the base URL.
 
 ---
 

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- A `base_url` that ends in `/v1` (the form `SDK_SPEC.md` names) no longer produces `/v1/v1/...` paths and 404s; the client strips the suffix and adds `/v1` itself.
 - A queued optimize answer without `upload_url` or `job_id` raises `SmallPict::Error` with code `invalid_response` before any upload, instead of a raw URI error from Faraday.
 - Every Faraday error (for example `Faraday::SSLError` from a proxy with its own CA) is wrapped in `SmallPict::NetworkError`, so `rescue SmallPict::Error` catches it. `validate_key` returns `false` only for 401 and 403; an outage raises `NetworkError` instead of being reported as an invalid key.
 - `SmallPict.configure` takes effect after the first module-level call too. The memoised default client was never rebuilt, so a second `configure` (per-tenant rake task, test suite) kept the first keys.

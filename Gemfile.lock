@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    smallpict (0.1.0)
+    smallpict (0.0.8)
       faraday (>= 2.0)
 
 GEM

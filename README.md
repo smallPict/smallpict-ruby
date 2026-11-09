@@ -23,7 +23,7 @@ Official Ruby gem for the [SmallPict Image Optimization API](https://smallpict.a
 Add to your application's `Gemfile`:
 
 ```ruby
-gem "smallpict", "~> 0.1.0"
+gem "smallpict", "~> 0.0.8"
 ```
 
 And then execute:

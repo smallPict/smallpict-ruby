@@ -5,7 +5,9 @@ All notable changes to the `smallpict` gem will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.8] - Unreleased
+
+Next release after v0.0.7. It includes the changes first written up as 0.1.0, which was never tagged or published.
 
 ### Fixed
 - A `base_url` that ends in `/v1` (the form `SDK_SPEC.md` names) no longer produces `/v1/v1/...` paths and 404s; the client strips the suffix and adds `/v1` itself.
@@ -28,8 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RuboCop passes and runs in CI. `.rubocop.yml` now states the code's own conventions (double quotes, table-aligned hashes, 140-column lines outside specs) and turns off the size metrics and two naming cops that argued with the public API; the remaining offences were autocorrected.
 - **`secret_key` is required.** `SmallPict::Client.new` raises `ValidationError` when neither `secret_key:`, `SmallPict.configure` nor `SMALLPICT_SECRET_KEY` provides one. The Bearer-only mode (API key without signature) is gone: the API refuses it with 403 "Legacy Bearer token format is no longer supported", so a client built that way never worked. README examples pass both keys.
 - Release workflow runs `bundle exec rspec` before `gem build`, passes the RubyGems key through `GEM_HOST_API_KEY` instead of writing `~/.gem/credentials`, restricts the token to `contents: read`, and pins actions to commit SHAs.
-
-## [0.1.0] - 2026-11-05
 
 ### Fixed
 - **`optimize` now returns an optimized image.** `POST /v1/optimize` only queues the job and returns a pre-signed `upload_url`; the SDK stopped there, so the worker failed every job with "client upload never arrived" and callers got an empty `url` with 0 % saved. `optimize` now PUTs the bytes to `upload_url` (plain PUT with `Content-Type` and `Content-Length` as sent, no API headers, no retry), polls `GET /v1/optimize/status` every `poll_interval` (default 1 s) and returns once the job is `completed`, with `url`, `format`, `bytes_saved`, `mode_applied`, `quality_applied` and `folder` from the job status (`SDK_SPEC.md` section 3d).
